@@ -21,9 +21,18 @@ dependencies = [
 [project.scripts]
 aicodeaudit = "aicodeaudit.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/shenxianpeng/aicodeaudit"
+Documentation = "https://shenxianpeng.github.io/aicodeaudit/"
+"Bug Tracker" = "https://github.com/shenxianpeng/aicodeaudit/issues"
+
 [dependency-groups]
 dev = [
     "pytest>=8.3.5",
+]
+docs = [
+    "mkdocs>=1.4.2",
+    "mkdocs-material>=9.0.0",
 ]
 
 [tool.setuptools]

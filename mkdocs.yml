@@ -1,0 +1,85 @@
+site_name: AI Code Audit
+site_description: Context-aware security auditing for AI-generated Python code.
+site_url: https://shenxianpeng.github.io/aicodeaudit/
+repo_url: https://github.com/shenxianpeng/aicodeaudit
+repo_name: shenxianpeng/aicodeaudit
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  font:
+    text: false
+    code: false
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.top
+    - navigation.tabs
+    - navigation.sections
+    - navigation.footer
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Home: index.md
+  - English:
+    - Overview: en/index.md
+    - Installation: en/installation.md
+    - Usage: en/usage.md
+    - Configuration: en/configuration.md
+    - How It Works: en/how-it-works.md
+  - 中文:
+    - 概览: zh/index.md
+    - 安装: zh/installation.md
+    - 使用: zh/usage.md
+    - 配置: zh/configuration.md
+    - 工作原理: zh/how-it-works.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/shenxianpeng/aicodeaudit
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/aicodeaudit/
+  generator: false
+
+copyright: MIT License · AI Code Audit

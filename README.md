@@ -1,5 +1,7 @@
 # AI Code Audit
 
+[![Docs](https://img.shields.io/badge/docs-github%20pages-blue)](https://shenxianpeng.github.io/aicodeaudit/)
+
 `AI Code Audit` is a context-aware CLI security audit tool for AI-generated Python code.
 
 It builds a lightweight security profile from the existing repository, runs `semgrep` as a fast first pass, and only asks the LLM to explain concrete issues when there is something to investigate. The main differentiator is context-gap reporting, for example: "this file uses `sqlite3`, but the rest of the project uses `sqlalchemy` sessions."
@@ -58,3 +60,11 @@ CLI flags still override config values.
 uv run pytest tests/unit
 uv run pytest -m eval tests/eval
 ```
+
+## Documentation
+
+Full documentation is published with GitHub Pages:
+
+- English: `docs/en/`
+- 中文: `docs/zh/`
+- Site URL: `https://shenxianpeng.github.io/aicodeaudit/`
