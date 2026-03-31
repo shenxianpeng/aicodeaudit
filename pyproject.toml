@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=69", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "aicodescan"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Context-aware AI code security scanner for Python projects"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,6 +31,9 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
