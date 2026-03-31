@@ -1,8 +1,8 @@
 __pycache__/
 .pytest_cache/
-.aicodescan-context.json
+.aicodeaudit-context.json
 .coverage
 *.pyc
 
-src/aicodescan.egg-info/
+src/aicodeaudit.egg-info/
 dist/

@@ -1,5 +1,5 @@
-from aicodescan.llm_analyzer import LLMAnalyzer
-from aicodescan.models import Finding
+from aicodeaudit.llm_analyzer import LLMAnalyzer
+from aicodeaudit.models import Finding
 
 
 def test_chunk_source_splits_large_files() -> None:

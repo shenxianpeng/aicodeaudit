@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aicodescan"
+name = "aicodeaudit"
 dynamic = ["version"]
-description = "Context-aware AI code security scanner for Python projects"
+description = "Context-aware security audit CLI for AI-generated Python code"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-aicodescan = "aicodescan.cli:app"
+aicodeaudit = "aicodeaudit.cli:app"
 
 [dependency-groups]
 dev = [

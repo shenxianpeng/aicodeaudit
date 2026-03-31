@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.11"
 
 [[package]]
-name = "aicodescan"
+name = "aicodeaudit"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from aicodescan.semgrep_runner import SemgrepError, SemgrepRunner
+from aicodeaudit.semgrep_runner import SemgrepError, SemgrepRunner
 
 
 def test_run_parses_semgrep_json(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

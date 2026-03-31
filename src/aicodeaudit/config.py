@@ -17,7 +17,7 @@ class ConfigError(RuntimeError):
 
 
 def load_app_config(root: Path) -> AppConfig:
-    config_path = root / ".aicodescan.yaml"
+    config_path = root / ".aicodeaudit.yaml"
     if not config_path.exists():
         return AppConfig()
 

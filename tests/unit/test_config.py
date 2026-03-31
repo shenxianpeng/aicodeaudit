@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from aicodescan.config import load_app_config
+from aicodeaudit.config import load_app_config
 
 
 def test_load_app_config_reads_yaml_values(tmp_path: Path) -> None:
-    (tmp_path / ".aicodescan.yaml").write_text(
+    (tmp_path / ".aicodeaudit.yaml").write_text(
         "\n".join(
             [
                 "provider: openai",

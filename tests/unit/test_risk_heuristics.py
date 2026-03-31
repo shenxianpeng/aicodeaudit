@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from aicodescan.models import ContextProfile
-from aicodescan.risk_heuristics import fallback_reasons
+from aicodeaudit.models import ContextProfile
+from aicodeaudit.risk_heuristics import fallback_reasons
 
 
 def test_detects_low_level_db_bypass(tmp_path: Path) -> None:
