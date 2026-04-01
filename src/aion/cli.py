@@ -15,11 +15,13 @@ from rich.table import Table
 from .config import AppConfig, ConfigError, load_app_config
 from .context_extractor import ContextExtractor
 from .evaluation import compute_repair_metrics, evaluate_repair_cases, load_fixture_cases
+from .inbox import EventInbox
 from .llm_analyzer import LLMAnalyzer, LLMAnalyzerError
 from .models import (
     ContextProfile,
     EventQueueSummary,
     Finding,
+    InboxItem,
     OrchestrationResult,
     OrchestrationEvent,
     PatchArtifact,
@@ -274,25 +276,67 @@ def process_event_queue(
         context_profile = context_loader(event)
         result = orchestrator.process_event(event, context_profile, repo_root=repo_root)
         results.append(result)
-        if result.policy.action == "auto_repair_sandbox":
-            summary.auto_repair_count += 1
-        elif result.policy.action == "needs_human_review":
-            summary.human_review_count += 1
-        elif result.policy.action == "blocked":
-            summary.blocked_count += 1
-        if result.sandbox is not None and result.sandbox.verification is not None and result.sandbox.verification.verdict == "verified_fix":
-            summary.verified_count += 1
-        if result.sandbox is not None and result.sandbox.rollout is not None:
-            if result.sandbox.rollout.recommendation == "approved_for_rollout":
-                summary.approved_count += 1
-            elif result.sandbox.rollout.recommendation == "rollback":
-                summary.rollback_count += 1
+        _accumulate_queue_summary(summary, result)
         if results_dir is not None:
             results_dir.mkdir(parents=True, exist_ok=True)
             result_path = results_dir / f"{event.event_id}.json"
             result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
         if cleanup_sandbox:
             orchestrator.cleanup_sandbox(result)
+
+    _exit_with_event_queue_results(results, summary, output)
+
+
+@app.command("enqueue-event")
+def enqueue_event(
+    event_file: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    payload = json.loads(event_file.read_text(encoding="utf-8"))
+    event = Orchestrator().ingest_event(payload)
+    item = EventInbox(inbox_root).enqueue(event)
+    _exit_with_inbox_item(item, output)
+
+
+@app.command("list-inbox")
+def list_inbox(
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    status: str | None = typer.Option(None, "--status", help="pending, processed, or failed"),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    items = EventInbox(inbox_root).list_items(status=status)
+    _exit_with_inbox_items(items, output)
+
+
+@app.command("process-inbox")
+def process_inbox(
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+    cleanup_sandbox: bool = typer.Option(False, "--cleanup-sandbox/--keep-sandbox", help="Remove sandbox workspaces after processing."),
+) -> None:
+    inbox = EventInbox(inbox_root)
+    pending = inbox.list_items(status="pending")
+    orchestrators: dict[str, Orchestrator] = {}
+    results: list[OrchestrationResult] = []
+    summary = EventQueueSummary(total_events=len(pending))
+
+    for item in pending:
+        try:
+            repo_root = _resolve_event_root(item.event)
+            key = normalize_path(repo_root)
+            orchestrator = orchestrators.setdefault(key, _build_orchestrator(repo_root))
+            context_profile = _load_context_profile_for_event(item.event, None)
+            result = orchestrator.process_event(item.event, context_profile, repo_root=repo_root)
+            result_path = inbox.result_file(item)
+            result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+            inbox.mark_processed(item, result_path)
+            results.append(result)
+            _accumulate_queue_summary(summary, result)
+            if cleanup_sandbox:
+                orchestrator.cleanup_sandbox(result)
+        except Exception as exc:  # noqa: BLE001
+            inbox.mark_failed(item, str(exc))
 
     _exit_with_event_queue_results(results, summary, output)
 
@@ -483,6 +527,22 @@ def _resolve_event_root(event: OrchestrationEvent) -> Path:
 def _build_orchestrator(root: Path) -> Orchestrator:
     config = load_app_config(root)
     return Orchestrator.from_config(config)
+
+
+def _accumulate_queue_summary(summary: EventQueueSummary, result: OrchestrationResult) -> None:
+    if result.policy.action == "auto_repair_sandbox":
+        summary.auto_repair_count += 1
+    elif result.policy.action == "needs_human_review":
+        summary.human_review_count += 1
+    elif result.policy.action == "blocked":
+        summary.blocked_count += 1
+    if result.sandbox is not None and result.sandbox.verification is not None and result.sandbox.verification.verdict == "verified_fix":
+        summary.verified_count += 1
+    if result.sandbox is not None and result.sandbox.rollout is not None:
+        if result.sandbox.rollout.recommendation == "approved_for_rollout":
+            summary.approved_count += 1
+        elif result.sandbox.rollout.recommendation == "rollback":
+            summary.rollback_count += 1
 
 
 def _build_repair_session(target: Path, context_profile: ContextProfile) -> RepairSession:
@@ -687,6 +747,36 @@ def _exit_with_event_queue_results(results: list[OrchestrationResult], summary: 
             "yes" if verified else "no",
             rollout,
         )
+    stdout_console.print(table)
+    raise typer.Exit(code=0)
+
+
+def _exit_with_inbox_item(item: InboxItem, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(item.model_dump_json())
+        raise typer.Exit(code=0)
+
+    stdout_console.print(
+        Panel(
+            f"Item: {item.item_id}\nStatus: {item.status}\nEvent: {item.event.event_type}\nTarget: {item.event.target_file}",
+            title="AION Inbox",
+        )
+    )
+    raise typer.Exit(code=0)
+
+
+def _exit_with_inbox_items(items: list[InboxItem], output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(json.dumps([item.model_dump() for item in items]))
+        raise typer.Exit(code=0)
+
+    table = Table(title="AION Inbox")
+    table.add_column("Item")
+    table.add_column("Status")
+    table.add_column("Event")
+    table.add_column("Target")
+    for item in items:
+        table.add_row(item.item_id, item.status, item.event.event_type, item.event.target_file)
     stdout_console.print(table)
     raise typer.Exit(code=0)
 

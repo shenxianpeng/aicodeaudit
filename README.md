@@ -42,6 +42,8 @@ uv run aion run-incident ./path/to/file.py --context-file ./context.json --outpu
 uv run aion repair-eval ./tests/fixtures --records-dir ./repair-records --output json
 uv run aion process-event ./event.json --result-path ./orchestration.json --output json
 uv run aion process-event-queue ./events.json --results-dir ./queue-results --output json
+uv run aion enqueue-event ./event.json --inbox-root ./.aion/inbox
+uv run aion process-inbox --inbox-root ./.aion/inbox --output json
 ```
 
 ## Config File
@@ -79,6 +81,7 @@ CLI flags still override config values.
 - `process-event` is the current control-plane prototype: it ingests an event payload, applies policy gating, and runs approved remediations in a sandbox workspace.
 - `.aion.yaml` now controls auto-repair issue allowlists, minimum confidence, and sandbox mode (`file` or `repository`) for orchestration commands.
 - `process-event-queue` processes a JSON array of events, persists per-event results, and reports aggregate queue metrics.
+- `enqueue-event`, `list-inbox`, and `process-inbox` provide a persistent file-backed inbox so orchestration can consume events incrementally instead of only from ad hoc JSON arrays.
 - Sandbox orchestration can now run project-specific verification commands and emit a rollout recommendation: `approved_for_rollout`, `rollback`, or `needs_human_review`.
 
 ## Tests

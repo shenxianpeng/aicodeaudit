@@ -57,12 +57,24 @@ uv run aion process-event ./event.json \
 uv run aion process-event-queue ./events.json \
   --results-dir ./queue-results \
   --output json
+
+uv run aion enqueue-event ./event.json \
+  --inbox-root ./.aion/inbox
+
+uv run aion list-inbox \
+  --inbox-root ./.aion/inbox \
+  --status pending
+
+uv run aion process-inbox \
+  --inbox-root ./.aion/inbox \
+  --output json
 ```
 
 The current autonomy release generates patch artifacts and verifies them locally. It does not rewrite production files in place.
 `repair-eval` runs the deterministic repair pipeline across fixture cases and reports repair success rate, verification pass rate, false-fix rate, and rollback rate.
 `process-event` is the staged orchestration entrypoint. It accepts an event payload, applies policy gating, and only runs approved remediations inside a sandbox workspace.
 `process-event-queue` accepts a JSON array of events and reports queue-level metrics while persisting one result file per event.
+The inbox commands provide a persistent event queue under `.aion/inbox`, so runtime alerts can be enqueued and processed incrementally.
 
 Example orchestration settings in `.aion.yaml`:
 

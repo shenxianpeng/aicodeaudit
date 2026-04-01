@@ -57,12 +57,24 @@ uv run aion process-event ./event.json \
 uv run aion process-event-queue ./events.json \
   --results-dir ./queue-results \
   --output json
+
+uv run aion enqueue-event ./event.json \
+  --inbox-root ./.aion/inbox
+
+uv run aion list-inbox \
+  --inbox-root ./.aion/inbox \
+  --status pending
+
+uv run aion process-inbox \
+  --inbox-root ./.aion/inbox \
+  --output json
 ```
 
 当前首版自治能力只生成补丁 artifact 并在本地验证，不会直接原地改写生产文件。
 `repair-eval` 会批量运行确定性修复流水线，并输出修复成功率、验证通过率、误修率和回滚率。
 `process-event` 是当前控制平面原型入口：它接收事件 payload，做策略门控，并只在 sandbox 工作区里执行获批修复。
 `process-event-queue` 接收一个事件数组，批量执行编排，并为每个事件落盘结果，同时输出队列级指标。
+inbox 命令提供了持久化事件队列 `.aion/inbox`，让运行时告警可以先入队，再按批次增量处理。
 
 `.aion.yaml` 里的编排配置示例：
 

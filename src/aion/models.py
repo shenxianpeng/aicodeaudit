@@ -13,6 +13,7 @@ EventType = Literal["code_scan", "runtime_alert", "dependency_alert"]
 PolicyAction = Literal["auto_repair_sandbox", "needs_human_review", "blocked"]
 SandboxMode = Literal["file", "repository"]
 RolloutRecommendation = Literal["approved_for_rollout", "rollback", "needs_human_review"]
+InboxStatus = Literal["pending", "processed", "failed"]
 
 
 class ContextProfile(BaseModel):
@@ -240,6 +241,16 @@ class EventQueueSummary(BaseModel):
     blocked_count: int = 0
     approved_count: int = 0
     rollback_count: int = 0
+
+
+class InboxItem(BaseModel):
+    item_id: str
+    status: InboxStatus = "pending"
+    event: OrchestrationEvent
+    created_at: str
+    processed_at: str | None = None
+    result_path: str | None = None
+    error: str | None = None
 
 
 def normalize_path(path: Path) -> str:
