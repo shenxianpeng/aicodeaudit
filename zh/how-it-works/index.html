@@ -16,6 +16,8 @@
         <link rel="prev" href="../configuration/">
       
       
+        <link rel="next" href="../roadmap/">
+      
       
         
       
@@ -90,7 +92,9 @@
     
       
 
-<header class="md-header" data-md-component="header">
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="AION" class="md-header__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -214,76 +218,6 @@
       
         
           
-            
-<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
-        
-  
-  
-    
-  
-  Home
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../en/" class="md-tabs__link">
-          
-  
-  
-  English
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-    
-  
-  
-    
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
-          
-  
-  
-  中文
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ul>
-  </div>
-</nav>
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -297,10 +231,8 @@
                     
 
 
-  
 
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="AION" class="md-nav__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -363,19 +295,19 @@
     
     
       
-      
+        
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -544,6 +476,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -565,9 +525,6 @@
     
       
         
-        
-      
-      
         
       
     
@@ -790,7 +747,7 @@
   <a href="#1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 识别目标文件
+        1. 统一输入信号
       
     </span>
   </a>
@@ -801,7 +758,7 @@
   <a href="#2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 提取仓库上下文
+        2. 构建仓库上下文
       
     </span>
   </a>
@@ -809,10 +766,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-semgrep" class="md-nav__link">
+  <a href="#3-incident" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 先跑 Semgrep
+        3. 把发现结果提升为 incident
       
     </span>
   </a>
@@ -820,10 +777,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-llm" class="md-nav__link">
+  <a href="#4-incident-patch-artifact" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 只在必要时升级到 LLM
+        4. 从 incident 生成 patch artifact
       
     </span>
   </a>
@@ -831,10 +788,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#5-sandbox" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 输出结果
+        5. 在 sandbox 中验证
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 持久化控制面状态
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-staged-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 管理 staged rollout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 规划运行时优先的防护
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 当前边界
       
     </span>
   </a>
@@ -845,6 +846,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -887,7 +916,7 @@
   <a href="#1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. 识别目标文件
+        1. 统一输入信号
       
     </span>
   </a>
@@ -898,7 +927,7 @@
   <a href="#2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. 提取仓库上下文
+        2. 构建仓库上下文
       
     </span>
   </a>
@@ -906,10 +935,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-semgrep" class="md-nav__link">
+  <a href="#3-incident" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. 先跑 Semgrep
+        3. 把发现结果提升为 incident
       
     </span>
   </a>
@@ -917,10 +946,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-llm" class="md-nav__link">
+  <a href="#4-incident-patch-artifact" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. 只在必要时升级到 LLM
+        4. 从 incident 生成 patch artifact
       
     </span>
   </a>
@@ -928,10 +957,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5" class="md-nav__link">
+  <a href="#5-sandbox" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. 输出结果
+        5. 在 sandbox 中验证
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 持久化控制面状态
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-staged-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 管理 staged rollout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 规划运行时优先的防护
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 当前边界
       
     </span>
   </a>
@@ -959,48 +1032,114 @@
 
 
 <h1 id="_1">工作原理<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>AION 是一个分阶段执行的自进化分析流程。</p>
-<h2 id="1">1. 识别目标文件<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
-<p>CLI 会从输入路径中解析 Python 文件，并自动排除 <code>.git</code>、<code>.venv</code>、
-<code>node_modules</code>、<code>__pycache__</code> 等常见目录。</p>
-<p>然后再通过以下方式缩小到更可能是 AI 生成的文件：</p>
+<p>AION 是一个分阶段控制面。它让同一个仓库从静态分析继续走到修复、验证、事件编排、
+发布控制和运行时防护，而不需要切换核心数据模型。</p>
+<h2 id="1">1. 统一输入信号<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<p>AION 可以从以下入口开始：</p>
 <ul>
-<li>文件内容里的生成标记，例如 <code>Generated by</code></li>
-<li>Git 历史中的 Copilot / Cursor 迹象</li>
-<li><code>--ai-generated</code> 显式指定的文件或目录</li>
+<li>对仓库或文件执行 <code>scan</code></li>
+<li>单个事件 JSON</li>
+<li>事件队列 JSON</li>
+<li>文件型 inbox item</li>
+<li>webhook <code>POST /events</code></li>
 </ul>
-<p>如果没有发现任何标记，它会给出 warning，然后扫描全部 Python 文件。</p>
-<h2 id="2">2. 提取仓库上下文<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
-<p>上下文提取器会基于静态分析构建一个轻量级仓库画像，包括：</p>
+<p>这些输入最终都会被统一成结构化 orchestration event。</p>
+<h2 id="2">2. 构建仓库上下文<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<p>在判断风险前，AION 会先提取一个轻量级仓库画像，包括：</p>
 <ul>
-<li>imports</li>
-<li>鉴权 decorators</li>
+<li>imports 和主导框架使用习惯</li>
+<li>鉴权装饰器</li>
 <li>数据库访问模式</li>
 <li>函数名</li>
-<li>常见 ORM 和 HTTP client</li>
+<li>可能采用的 ORM 与 HTTP client 约定</li>
 </ul>
-<p>这一步决定了后续能不能给出有价值的 context gap 判断。</p>
-<h2 id="3-semgrep">3. 先跑 Semgrep<a class="headerlink" href="#3-semgrep" title="Permanent link">&para;</a></h2>
-<p>如果系统中安装了 <code>semgrep</code>，AION 会先运行 <code>p/python</code> 规则集，
-把它作为低成本的第一轮筛查。</p>
-<h2 id="4-llm">4. 只在必要时升级到 LLM<a class="headerlink" href="#4-llm" title="Permanent link">&para;</a></h2>
-<p>只有在以下情况，才会调用 LLM：</p>
+<p>这样它就不只是识别通用规则命中，还能识别“偏离当前仓库惯例”的风险。</p>
+<h2 id="3-incident">3. 把发现结果提升为 incident<a class="headerlink" href="#3-incident" title="Permanent link">&para;</a></h2>
+<p>检测链路会结合：</p>
 <ul>
-<li><code>semgrep</code> 命中了问题</li>
-<li>存在仓库上下文上的 fallback 风险信号</li>
-<li>本地没有安装 <code>semgrep</code></li>
+<li><code>semgrep --config p/python</code></li>
+<li>仓库特定 fallback heuristic</li>
+<li>对上下文敏感问题的可选 LLM 解释</li>
 </ul>
-<p>这样可以比“所有文件都发给模型”更聚焦，也更便宜。</p>
-<h2 id="5">5. 输出结果<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
-<p>每条问题都会尽量包含：</p>
+<p>可执行的问题会被提升为 incident，包含严重级别、置信度、证据、修复策略和验证策略。</p>
+<h2 id="4-incident-patch-artifact">4. 从 incident 生成 patch artifact<a class="headerlink" href="#4-incident-patch-artifact" title="Permanent link">&para;</a></h2>
+<p>对于支持的问题类型，AION 会生成确定性 patch artifact，而不是直接改动 live 仓库：</p>
 <ul>
-<li>问题描述</li>
-<li>严重级别</li>
-<li>行号</li>
-<li>context gap</li>
-<li>修复建议</li>
+<li>插值式 <code>sqlite3</code> 查询改为参数化调用</li>
+<li>硬编码 secret 改为环境变量读取</li>
+<li>缺失鉴权装饰器改为注入仓库已有模式</li>
 </ul>
-<p>结果支持富文本终端输出，也支持 JSON 输出。</p>
+<p>artifact 会记录原始内容、修复后内容、diff、plan 和校验状态。</p>
+<h2 id="5-sandbox">5. 在 sandbox 中验证<a class="headerlink" href="#5-sandbox" title="Permanent link">&para;</a></h2>
+<p>artifact 会以两种模式之一 staged 到临时工作区：</p>
+<ul>
+<li><code>file</code>：只复制目标文件</li>
+<li><code>repository</code>：复制整个仓库，并在其中替换目标路径</li>
+</ul>
+<p>验证链路会组合：</p>
+<ul>
+<li>Python 语法检查</li>
+<li>Semgrep 重扫</li>
+<li>内建修复断言</li>
+<li><code>sandbox_verification_commands</code> 中配置的项目级命令</li>
+</ul>
+<p>最终会生成 rollout recommendation：</p>
+<ul>
+<li><code>approved_for_rollout</code></li>
+<li><code>rollback</code></li>
+<li><code>needs_human_review</code></li>
+</ul>
+<h2 id="6">6. 持久化控制面状态<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<p>当前实现把状态保存为本地 JSON artifact。</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>默认位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inbox 事件</td>
+<td><code>.aion/inbox/events/</code></td>
+</tr>
+<tr>
+<td>Inbox 结果</td>
+<td><code>.aion/inbox/results/</code></td>
+</tr>
+<tr>
+<td>Release candidate</td>
+<td><code>.aion/releases/</code></td>
+</tr>
+<tr>
+<td>Repair record</td>
+<td>用户指定的 <code>--record-path</code> 或评估目录</td>
+</tr>
+</tbody>
+</table>
+<p>这让整个流程更容易审计，也更容易被脚本化系统接管。</p>
+<h2 id="7-staged-rollout">7. 管理 staged rollout<a class="headerlink" href="#7-staged-rollout" title="Permanent link">&para;</a></h2>
+<p>成功的 sandbox 结果可以继续提升为 release candidate。当前发布状态机支持：</p>
+<ul>
+<li>candidate 创建</li>
+<li>人工批准</li>
+<li>canary、staged、broad、full 分阶段推进</li>
+<li>拒绝</li>
+<li>回滚</li>
+</ul>
+<h2 id="8">8. 规划运行时优先的防护<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<p>除了代码修复，AION 还会输出运行时防护计划，例如：</p>
+<ul>
+<li>gateway block</li>
+<li>WAF rule</li>
+<li>feature flag 变更</li>
+<li>dependency pin</li>
+<li>code patch follow-up</li>
+</ul>
+<p>它的默认倾向是先做 containment，再做代码 rollout。</p>
+<h2 id="9">9. 当前边界<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
+<p>当前版本停留在本地控制面决策和持久化 artifact 这一层。真实生产队列、部署系统、
+WAF API、feature flag provider 和自动发布系统，仍然是这些接口之上的适配工作。</p>
 
 
 
@@ -1051,6 +1190,22 @@
             </div>
           </a>
         
+        
+          
+          <a href="../roadmap/" class="md-footer__link md-footer__link--next" aria-label="Next: 路线图">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                路线图
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
         
       </nav>
     
@@ -1108,10 +1263,12 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.tabs", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/language-switcher.js"></script>
       
     
   </body>

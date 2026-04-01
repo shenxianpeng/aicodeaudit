@@ -92,7 +92,9 @@
     
       
 
-<header class="md-header" data-md-component="header">
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="AION" class="md-header__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -216,76 +218,6 @@
       
         
           
-            
-<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
-        
-  
-  
-    
-  
-  Home
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-    
-  
-  
-    
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
-          
-  
-  
-  English
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../zh/" class="md-tabs__link">
-          
-  
-  
-  中文
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ul>
-  </div>
-</nav>
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -299,10 +231,8 @@
                     
 
 
-  
 
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="AION" class="md-nav__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -368,9 +298,6 @@
     
       
         
-        
-      
-      
         
       
     
@@ -584,10 +511,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#override-order" class="md-nav__link">
+  <a href="#resolution-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Override order
+        Resolution rules
       
     </span>
   </a>
@@ -595,10 +522,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#cache" class="md-nav__link">
+  <a href="#recommended-profiles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cache
+        Recommended profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational notes
       
     </span>
   </a>
@@ -642,6 +580,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -660,19 +626,19 @@
     
     
       
-      
+        
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -841,6 +807,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -897,10 +891,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#override-order" class="md-nav__link">
+  <a href="#resolution-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Override order
+        Resolution rules
       
     </span>
   </a>
@@ -908,10 +902,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#cache" class="md-nav__link">
+  <a href="#recommended-profiles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Cache
+        Recommended profiles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operational-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operational notes
       
     </span>
   </a>
@@ -939,20 +944,32 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>Place a <code>.aion.yaml</code> file in the target repository root.</p>
+<p>Place <code>.aion.yaml</code> in the target repository root. AION reads it for repository
+scan defaults and for orchestration commands that resolve a <code>repo_root</code>.</p>
 <h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
 <p><code>yaml
 provider: openai
 model: gpt-4.1
 ignore_paths:
   - tests/*
-  - scripts/generated_*.py</code></p>
+  - scripts/generated_*.py
+auto_repair_issue_types:
+  - raw_sqlite_query
+  - hardcoded_secret
+  - missing_auth_decorator
+auto_repair_min_confidence: 0.90
+sandbox_mode: repository
+sandbox_verification_commands:
+  - python -m pytest tests/unit
+auto_approve_verified_fixes: false
+rollback_on_verification_failure: true</code></p>
 <h2 id="fields">Fields<a class="headerlink" href="#fields" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Field</th>
 <th>Type</th>
+<th>Default</th>
 <th>Description</th>
 </tr>
 </thead>
@@ -960,26 +977,82 @@ ignore_paths:
 <tr>
 <td><code>provider</code></td>
 <td>string</td>
-<td><code>anthropic</code> or <code>openai</code></td>
+<td><code>null</code></td>
+<td>Scan-time LLM provider, <code>anthropic</code> or <code>openai</code></td>
 </tr>
 <tr>
 <td><code>model</code></td>
 <td>string</td>
-<td>Explicit model name</td>
+<td>provider default</td>
+<td>Explicit model override for <code>scan</code></td>
 </tr>
 <tr>
 <td><code>ignore_paths</code></td>
 <td>list</td>
-<td>Glob patterns to skip during scanning</td>
+<td><code>[]</code></td>
+<td>Glob patterns skipped during repository scanning</td>
+</tr>
+<tr>
+<td><code>auto_repair_issue_types</code></td>
+<td>list</td>
+<td>built-in set</td>
+<td>Incident types allowed into automatic sandbox remediation</td>
+</tr>
+<tr>
+<td><code>auto_repair_min_confidence</code></td>
+<td>float</td>
+<td><code>0.85</code></td>
+<td>Minimum incident confidence required before automatic remediation</td>
+</tr>
+<tr>
+<td><code>sandbox_mode</code></td>
+<td>string</td>
+<td><code>repository</code></td>
+<td><code>file</code> for single-file staging or <code>repository</code> for full repository staging</td>
+</tr>
+<tr>
+<td><code>sandbox_verification_commands</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>Commands executed in the staged sandbox after built-in verification</td>
+</tr>
+<tr>
+<td><code>auto_approve_verified_fixes</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>Emit <code>approved_for_rollout</code> when staged verification passes</td>
+</tr>
+<tr>
+<td><code>rollback_on_verification_failure</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td>Emit <code>rollback</code> instead of <code>needs_human_review</code> when staged verification fails</td>
 </tr>
 </tbody>
 </table>
-<h2 id="override-order">Override order<a class="headerlink" href="#override-order" title="Permanent link">&para;</a></h2>
-<p>CLI flags take precedence over <code>.aion.yaml</code>.</p>
-<h2 id="cache">Cache<a class="headerlink" href="#cache" title="Permanent link">&para;</a></h2>
-<p>Context extraction results are cached at:</p>
-<p><code>text
-~/.aion-context.json</code></p>
+<h2 id="resolution-rules">Resolution rules<a class="headerlink" href="#resolution-rules" title="Permanent link">&para;</a></h2>
+<ul>
+<li>CLI flags override matching <code>.aion.yaml</code> settings.</li>
+<li><code>scan</code> reads configuration from the target repository root.</li>
+<li><code>process-event</code>, <code>process-event-queue</code>, and inbox processing read configuration from the event <code>repo_root</code>.</li>
+</ul>
+<h2 id="recommended-profiles">Recommended profiles<a class="headerlink" href="#recommended-profiles" title="Permanent link">&para;</a></h2>
+<p>Conservative staging:</p>
+<p><code>yaml
+auto_repair_min_confidence: 0.95
+auto_approve_verified_fixes: false
+rollback_on_verification_failure: false</code></p>
+<p>Fast local experimentation:</p>
+<p><code>yaml
+sandbox_mode: file
+auto_approve_verified_fixes: true
+rollback_on_verification_failure: true</code></p>
+<h2 id="operational-notes">Operational notes<a class="headerlink" href="#operational-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>provider</code> and <code>model</code> affect <code>scan</code>; deterministic repair and orchestration do not require an LLM.</li>
+<li><code>sandbox_verification_commands</code> execute inside the staged workspace and each command result is stored in the orchestration record.</li>
+<li>Context extraction results are cached at <code>~/.aion-context.json</code>.</li>
+</ul>
 
 
 
@@ -1103,10 +1176,12 @@ ignore_paths:
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.tabs", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/language-switcher.js"></script>
       
     
   </body>

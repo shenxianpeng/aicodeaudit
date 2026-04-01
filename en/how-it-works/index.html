@@ -16,7 +16,7 @@
         <link rel="prev" href="../configuration/">
       
       
-        <link rel="next" href="../../zh/">
+        <link rel="next" href="../roadmap/">
       
       
         
@@ -92,7 +92,9 @@
     
       
 
-<header class="md-header" data-md-component="header">
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="AION" class="md-header__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -216,76 +218,6 @@
       
         
           
-            
-<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
-        
-  
-  
-    
-  
-  Home
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-    
-  
-  
-    
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
-          
-  
-  
-  English
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../zh/" class="md-tabs__link">
-          
-  
-  
-  中文
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ul>
-  </div>
-</nav>
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -299,10 +231,8 @@
                     
 
 
-  
 
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="AION" class="md-nav__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -368,9 +298,6 @@
     
       
         
-        
-      
-      
         
       
     
@@ -590,10 +517,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-identify-target-files" class="md-nav__link">
+  <a href="#1-normalize-the-signal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Identify target files
+        1. Normalize the signal
       
     </span>
   </a>
@@ -601,10 +528,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-extract-repository-context" class="md-nav__link">
+  <a href="#2-build-repository-context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Extract repository context
+        2. Build repository context
       
     </span>
   </a>
@@ -612,10 +539,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-run-semgrep-first" class="md-nav__link">
+  <a href="#3-upgrade-findings-into-incidents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Run Semgrep first
+        3. Upgrade findings into incidents
       
     </span>
   </a>
@@ -623,10 +550,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-escalate-to-llm-analysis-only-when-needed" class="md-nav__link">
+  <a href="#4-turn-incidents-into-patch-artifacts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Escalate to LLM analysis only when needed
+        4. Turn incidents into patch artifacts
       
     </span>
   </a>
@@ -634,10 +561,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-report-findings" class="md-nav__link">
+  <a href="#5-verify-inside-a-sandbox" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Report findings
+        5. Verify inside a sandbox
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-persist-control-plane-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Persist control-plane state
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-manage-staged-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Manage staged rollout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-plan-runtime-first-containment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Plan runtime-first containment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-current-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Current boundary
       
     </span>
   </a>
@@ -648,6 +619,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -671,19 +670,19 @@
     
     
       
-      
+        
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -852,6 +851,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../zh/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    路线图
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -886,10 +913,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-identify-target-files" class="md-nav__link">
+  <a href="#1-normalize-the-signal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Identify target files
+        1. Normalize the signal
       
     </span>
   </a>
@@ -897,10 +924,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-extract-repository-context" class="md-nav__link">
+  <a href="#2-build-repository-context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Extract repository context
+        2. Build repository context
       
     </span>
   </a>
@@ -908,10 +935,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-run-semgrep-first" class="md-nav__link">
+  <a href="#3-upgrade-findings-into-incidents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Run Semgrep first
+        3. Upgrade findings into incidents
       
     </span>
   </a>
@@ -919,10 +946,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-escalate-to-llm-analysis-only-when-needed" class="md-nav__link">
+  <a href="#4-turn-incidents-into-patch-artifacts" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Escalate to LLM analysis only when needed
+        4. Turn incidents into patch artifacts
       
     </span>
   </a>
@@ -930,10 +957,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#5-report-findings" class="md-nav__link">
+  <a href="#5-verify-inside-a-sandbox" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Report findings
+        5. Verify inside a sandbox
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-persist-control-plane-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Persist control-plane state
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-manage-staged-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Manage staged rollout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-plan-runtime-first-containment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Plan runtime-first containment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-current-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Current boundary
       
     </span>
   </a>
@@ -961,48 +1032,124 @@
 
 
 <h1 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h1>
-<p>AION is built as a staged pipeline.</p>
-<h2 id="1-identify-target-files">1. Identify target files<a class="headerlink" href="#1-identify-target-files" title="Permanent link">&para;</a></h2>
-<p>The CLI resolves Python files from the input path and excludes common directories such
-as <code>.git</code>, <code>.venv</code>, <code>node_modules</code>, and <code>__pycache__</code>.</p>
-<p>It then narrows the scan to likely AI-generated files using:</p>
+<p>AION is a staged control plane. The same repository can move from static
+analysis into repair, verification, orchestration, rollout control, and runtime
+containment without changing the core data model.</p>
+<h2 id="1-normalize-the-signal">1. Normalize the signal<a class="headerlink" href="#1-normalize-the-signal" title="Permanent link">&para;</a></h2>
+<p>AION can start from:</p>
 <ul>
-<li>file markers such as <code>Generated by</code></li>
-<li>Git history hints such as Copilot or Cursor signatures</li>
-<li>explicit <code>--ai-generated</code> targets</li>
+<li><code>scan</code> over a repository or file</li>
+<li>a single event JSON payload</li>
+<li>an event queue JSON payload</li>
+<li>a file-backed inbox item</li>
+<li>a webhook <code>POST /events</code></li>
 </ul>
-<p>If no marker is found, it warns and scans all Python files.</p>
-<h2 id="2-extract-repository-context">2. Extract repository context<a class="headerlink" href="#2-extract-repository-context" title="Permanent link">&para;</a></h2>
-<p>The context extractor samples the repository and builds a lightweight profile:</p>
+<p>All of these become structured orchestration events.</p>
+<h2 id="2-build-repository-context">2. Build repository context<a class="headerlink" href="#2-build-repository-context" title="Permanent link">&para;</a></h2>
+<p>Before deciding whether something is risky, AION extracts a lightweight
+repository profile:</p>
 <ul>
-<li>imports</li>
-<li>auth decorators</li>
+<li>imports and dominant framework usage</li>
+<li>authentication decorators</li>
 <li>database access patterns</li>
 <li>function names</li>
-<li>likely ORM and HTTP client usage</li>
+<li>probable ORM and HTTP client conventions</li>
 </ul>
-<p>That repository profile is what makes context-gap reporting possible.</p>
-<h2 id="3-run-semgrep-first">3. Run Semgrep first<a class="headerlink" href="#3-run-semgrep-first" title="Permanent link">&para;</a></h2>
-<p>If <code>semgrep</code> is installed, AION runs it as a fast initial pass and collects
-structured findings from <code>p/python</code>.</p>
-<h2 id="4-escalate-to-llm-analysis-only-when-needed">4. Escalate to LLM analysis only when needed<a class="headerlink" href="#4-escalate-to-llm-analysis-only-when-needed" title="Permanent link">&para;</a></h2>
-<p>The LLM is used when:</p>
+<p>That context lets AION detect project-specific drift instead of only generic
+rule hits.</p>
+<h2 id="3-upgrade-findings-into-incidents">3. Upgrade findings into incidents<a class="headerlink" href="#3-upgrade-findings-into-incidents" title="Permanent link">&para;</a></h2>
+<p>Detection combines:</p>
 <ul>
-<li><code>semgrep</code> found something</li>
-<li>there are repository-specific fallback signals</li>
-<li><code>semgrep</code> is unavailable</li>
+<li><code>semgrep --config p/python</code></li>
+<li>repository-specific fallback heuristics</li>
+<li>optional LLM explanation for context-sensitive findings</li>
 </ul>
-<p>This keeps analysis more targeted than sending every file to the model.</p>
-<h2 id="5-report-findings">5. Report findings<a class="headerlink" href="#5-report-findings" title="Permanent link">&para;</a></h2>
-<p>Each finding includes:</p>
+<p>Actionable results are promoted into incidents with severity, confidence,
+evidence, remediation strategy, and verification strategy.</p>
+<h2 id="4-turn-incidents-into-patch-artifacts">4. Turn incidents into patch artifacts<a class="headerlink" href="#4-turn-incidents-into-patch-artifacts" title="Permanent link">&para;</a></h2>
+<p>For supported issue types, AION generates deterministic patch artifacts instead
+of mutating the live repository:</p>
 <ul>
-<li>issue summary</li>
-<li>severity</li>
-<li>line number</li>
-<li>context gap</li>
-<li>suggested fix</li>
+<li>interpolated <code>sqlite3</code> queries become parameterized calls</li>
+<li>hardcoded secrets become environment lookups</li>
+<li>missing auth decorators are aligned to the repository pattern</li>
 </ul>
-<p>Output is available in rich terminal format or JSON.</p>
+<p>The artifact includes the original content, patched content, diff, plans, and
+validation status.</p>
+<h2 id="5-verify-inside-a-sandbox">5. Verify inside a sandbox<a class="headerlink" href="#5-verify-inside-a-sandbox" title="Permanent link">&para;</a></h2>
+<p>Artifacts are staged in one of two modes:</p>
+<ul>
+<li><code>file</code>: copy only the target file into a temporary workspace</li>
+<li><code>repository</code>: copy the repository and rewrite the target path inside it</li>
+</ul>
+<p>Verification combines:</p>
+<ul>
+<li>Python syntax validation</li>
+<li>Semgrep re-scan when available</li>
+<li>built-in remediation assertions</li>
+<li>project-specific commands from <code>sandbox_verification_commands</code></li>
+</ul>
+<p>The result becomes a rollout recommendation:</p>
+<ul>
+<li><code>approved_for_rollout</code></li>
+<li><code>rollback</code></li>
+<li><code>needs_human_review</code></li>
+</ul>
+<h2 id="6-persist-control-plane-state">6. Persist control-plane state<a class="headerlink" href="#6-persist-control-plane-state" title="Permanent link">&para;</a></h2>
+<p>The implementation keeps state as local JSON artifacts.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Default location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inbox events</td>
+<td><code>.aion/inbox/events/</code></td>
+</tr>
+<tr>
+<td>Inbox results</td>
+<td><code>.aion/inbox/results/</code></td>
+</tr>
+<tr>
+<td>Release candidates</td>
+<td><code>.aion/releases/</code></td>
+</tr>
+<tr>
+<td>Repair records</td>
+<td>user-specified <code>--record-path</code> or evaluation directory</td>
+</tr>
+</tbody>
+</table>
+<p>This keeps the system auditable and easy to script around.</p>
+<h2 id="7-manage-staged-rollout">7. Manage staged rollout<a class="headerlink" href="#7-manage-staged-rollout" title="Permanent link">&para;</a></h2>
+<p>Successful sandbox runs can be promoted into release candidates. The release
+state machine supports:</p>
+<ul>
+<li>candidate creation</li>
+<li>approval</li>
+<li>phased advancement through canary, staged, broad, and full rollout</li>
+<li>rejection</li>
+<li>rollback</li>
+</ul>
+<h2 id="8-plan-runtime-first-containment">8. Plan runtime-first containment<a class="headerlink" href="#8-plan-runtime-first-containment" title="Permanent link">&para;</a></h2>
+<p>In parallel with code remediation, AION can produce a runtime defense plan with
+actions such as:</p>
+<ul>
+<li>gateway blocks</li>
+<li>WAF rules</li>
+<li>feature flag changes</li>
+<li>dependency pins</li>
+<li>code-patch follow-up actions</li>
+</ul>
+<p>This keeps the system biased toward containment first and code rollout second.</p>
+<h2 id="9-current-boundary">9. Current boundary<a class="headerlink" href="#9-current-boundary" title="Permanent link">&para;</a></h2>
+<p>The current implementation stops at local control-plane decisions and persisted
+artifacts. Real production queues, deploy systems, WAF APIs, feature flag
+providers, and rollout automation remain integration work on top of these
+interfaces.</p>
 
 
 
@@ -1055,13 +1202,13 @@ structured findings from <code>p/python</code>.</p>
         
         
           
-          <a href="../../zh/" class="md-footer__link md-footer__link--next" aria-label="Next: 概览">
+          <a href="../roadmap/" class="md-footer__link md-footer__link--next" aria-label="Next: Roadmap">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                概览
+                Roadmap
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -1126,10 +1273,12 @@ structured findings from <code>p/python</code>.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.tabs", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/language-switcher.js"></script>
       
     
   </body>

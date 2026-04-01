@@ -92,7 +92,9 @@
     
       
 
-<header class="md-header" data-md-component="header">
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="AION" class="md-header__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -216,76 +218,6 @@
       
         
           
-            
-<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
-  <div class="md-grid">
-    <ul class="md-tabs__list">
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
-        
-  
-  
-    
-  
-  Home
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    
-    
-      <li class="md-tabs__item">
-        <a href="../../en/" class="md-tabs__link">
-          
-  
-  
-  English
-
-        </a>
-      </li>
-    
-  
-
-      
-        
-  
-  
-  
-    
-  
-  
-    
-    
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
-          
-  
-  
-  中文
-
-        </a>
-      </li>
-    
-  
-
-      
-    </ul>
-  </div>
-</nav>
-          
         
       
       <main class="md-main" data-md-component="main">
@@ -299,10 +231,8 @@
                     
 
 
-  
 
-
-<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="AION" class="md-nav__button md-logo" aria-label="AION" data-md-component="logo">
       
@@ -365,19 +295,19 @@
     
     
       
-      
+        
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
             
   
   
@@ -546,6 +476,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../en/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -567,9 +525,6 @@
     
       
         
-        
-      
-      
         
       
     
@@ -786,7 +741,7 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        覆盖优先级
+        解析规则
       
     </span>
   </a>
@@ -797,7 +752,18 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        缓存位置
+        推荐配置档位
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        运行说明
       
     </span>
   </a>
@@ -828,6 +794,34 @@
     
   
     工作原理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    路线图
   
 
     
@@ -900,7 +894,7 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
-        覆盖优先级
+        解析规则
       
     </span>
   </a>
@@ -911,7 +905,18 @@
   <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
-        缓存位置
+        推荐配置档位
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        运行说明
       
     </span>
   </a>
@@ -939,20 +944,32 @@
 
 
 <h1 id="_1">配置<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p>在目标仓库根目录创建 <code>.aion.yaml</code>。</p>
+<p>在目标仓库根目录放置 <code>.aion.yaml</code>。AION 会用它控制仓库扫描默认值，以及带
+<code>repo_root</code> 的编排命令。</p>
 <h2 id="_2">示例<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <p><code>yaml
 provider: openai
 model: gpt-4.1
 ignore_paths:
   - tests/*
-  - scripts/generated_*.py</code></p>
+  - scripts/generated_*.py
+auto_repair_issue_types:
+  - raw_sqlite_query
+  - hardcoded_secret
+  - missing_auth_decorator
+auto_repair_min_confidence: 0.90
+sandbox_mode: repository
+sandbox_verification_commands:
+  - python -m pytest tests/unit
+auto_approve_verified_fixes: false
+rollback_on_verification_failure: true</code></p>
 <h2 id="_3">字段说明<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>字段</th>
 <th>类型</th>
+<th>默认值</th>
 <th>说明</th>
 </tr>
 </thead>
@@ -960,26 +977,82 @@ ignore_paths:
 <tr>
 <td><code>provider</code></td>
 <td>string</td>
-<td><code>anthropic</code> 或 <code>openai</code></td>
+<td><code>null</code></td>
+<td><code>scan</code> 阶段使用的 LLM 提供方，支持 <code>anthropic</code> 或 <code>openai</code></td>
 </tr>
 <tr>
 <td><code>model</code></td>
 <td>string</td>
-<td>显式指定模型名</td>
+<td>provider 默认值</td>
+<td><code>scan</code> 的显式模型覆盖</td>
 </tr>
 <tr>
 <td><code>ignore_paths</code></td>
 <td>list</td>
-<td>扫描时忽略的 glob 模式</td>
+<td><code>[]</code></td>
+<td>仓库扫描时跳过的 glob 模式</td>
+</tr>
+<tr>
+<td><code>auto_repair_issue_types</code></td>
+<td>list</td>
+<td>内建集合</td>
+<td>允许进入自动 sandbox 修复的 incident 类型</td>
+</tr>
+<tr>
+<td><code>auto_repair_min_confidence</code></td>
+<td>float</td>
+<td><code>0.85</code></td>
+<td>触发自动修复所需的最小 incident 置信度</td>
+</tr>
+<tr>
+<td><code>sandbox_mode</code></td>
+<td>string</td>
+<td><code>repository</code></td>
+<td><code>file</code> 为单文件 staging，<code>repository</code> 为整仓 staging</td>
+</tr>
+<tr>
+<td><code>sandbox_verification_commands</code></td>
+<td>list</td>
+<td><code>[]</code></td>
+<td>在 staged sandbox 内执行的项目级命令</td>
+</tr>
+<tr>
+<td><code>auto_approve_verified_fixes</code></td>
+<td>boolean</td>
+<td><code>false</code></td>
+<td>staged 验证通过时直接给出 <code>approved_for_rollout</code></td>
+</tr>
+<tr>
+<td><code>rollback_on_verification_failure</code></td>
+<td>boolean</td>
+<td><code>true</code></td>
+<td>staged 验证失败时给出 <code>rollback</code>，而不是 <code>needs_human_review</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="_4">覆盖优先级<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
-<p>命令行参数优先级高于 <code>.aion.yaml</code>。</p>
-<h2 id="_5">缓存位置<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<p>上下文提取缓存保存在：</p>
-<p><code>text
-~/.aion-context.json</code></p>
+<h2 id="_4">解析规则<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<ul>
+<li>命令行参数会覆盖 <code>.aion.yaml</code> 中对应的配置。</li>
+<li><code>scan</code> 从目标仓库根目录读取配置。</li>
+<li><code>process-event</code>、<code>process-event-queue</code> 和 inbox 处理会从事件的 <code>repo_root</code> 读取配置。</li>
+</ul>
+<h2 id="_5">推荐配置档位<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<p>保守式 staging：</p>
+<p><code>yaml
+auto_repair_min_confidence: 0.95
+auto_approve_verified_fixes: false
+rollback_on_verification_failure: false</code></p>
+<p>本地快速实验：</p>
+<p><code>yaml
+sandbox_mode: file
+auto_approve_verified_fixes: true
+rollback_on_verification_failure: true</code></p>
+<h2 id="_6">运行说明<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>provider</code> 和 <code>model</code> 只影响 <code>scan</code>；确定性修复和编排流程本身不依赖 LLM。</li>
+<li><code>sandbox_verification_commands</code> 会在 staged workspace 中执行，并把每条命令结果写入 orchestration record。</li>
+<li>上下文提取缓存位于 <code>~/.aion-context.json</code>。</li>
+</ul>
 
 
 
@@ -1103,10 +1176,12 @@ ignore_paths:
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.tabs", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.top", "navigation.sections", "navigation.footer", "content.code.copy", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/language-switcher.js"></script>
       
     
   </body>
