@@ -1,0 +1,19 @@
+name: PR Labeler
+
+on:
+  workflow_call:
+
+jobs:
+  label_pr:
+    permissions:
+      # write permission is required for autolabeler
+      pull-requests: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      # Automatically label pull requests based on the release-drafter config
+      - uses: release-drafter/release-drafter/autolabeler@3a7fb5c85b80b1dda66e1ccb94009adbbd32fce3 # v7.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-name: github:shenxianpeng/.github:/.github/release-drafter.yml
