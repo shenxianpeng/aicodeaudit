@@ -15,6 +15,7 @@ SandboxMode = Literal["file", "repository"]
 RolloutRecommendation = Literal["approved_for_rollout", "rollback", "needs_human_review"]
 InboxStatus = Literal["pending", "processed", "failed"]
 ReleaseState = Literal["candidate", "approved", "executing", "completed", "rejected", "rolled_back"]
+DefenseActionType = Literal["feature_flag", "gateway_block", "waf_rule", "code_patch", "dependency_pin"]
 
 
 class ContextProfile(BaseModel):
@@ -189,6 +190,19 @@ class ReleaseCandidate(BaseModel):
     history: list[str] = Field(default_factory=list)
 
 
+class DefenseAction(BaseModel):
+    action_type: DefenseActionType
+    target: str
+    rationale: str
+    parameters: dict[str, object] = Field(default_factory=dict)
+
+
+class DefensePlan(BaseModel):
+    strategy: str
+    actions: list[DefenseAction] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class ScanReport(BaseModel):
     file: str
     findings: list[Finding] = Field(default_factory=list)
@@ -250,6 +264,7 @@ class OrchestrationResult(BaseModel):
     incidents: list[Incident] = Field(default_factory=list)
     artifact: PatchArtifact | None = None
     sandbox: SandboxExecutionResult | None = None
+    defense_plan: DefensePlan | None = None
     warnings: list[str] = Field(default_factory=list)
 
 

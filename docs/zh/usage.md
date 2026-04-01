@@ -82,6 +82,9 @@ uv run aion advance-release <candidate-id> \
 uv run aion rollback-release <candidate-id> \
   --reason "failed canary metrics" \
   --releases-root ./.aion/releases
+
+uv run aion plan-defense ./.aion/inbox/results/<event>.json \
+  --output json
 ```
 
 当前首版自治能力只生成补丁 artifact 并在本地验证，不会直接原地改写生产文件。
@@ -90,6 +93,7 @@ uv run aion rollback-release <candidate-id> \
 `process-event-queue` 接收一个事件数组，批量执行编排，并为每个事件落盘结果，同时输出队列级指标。
 inbox 命令提供了持久化事件队列 `.aion/inbox`，让运行时告警可以先入队，再按批次增量处理。
 release 命令会在 `.aion/releases` 下保存 staged rollout candidate，并支持批准、分阶段推进、拒绝和回滚。
+`plan-defense` 会输出运行时优先的防护动作，比如 gateway block、WAF rule、feature flag、dependency pin，以及后续 code patch。
 
 `.aion.yaml` 里的编排配置示例：
 

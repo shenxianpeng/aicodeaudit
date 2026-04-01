@@ -82,6 +82,9 @@ uv run aion advance-release <candidate-id> \
 uv run aion rollback-release <candidate-id> \
   --reason "failed canary metrics" \
   --releases-root ./.aion/releases
+
+uv run aion plan-defense ./.aion/inbox/results/<event>.json \
+  --output json
 ```
 
 The current autonomy release generates patch artifacts and verifies them locally. It does not rewrite production files in place.
@@ -90,6 +93,7 @@ The current autonomy release generates patch artifacts and verifies them locally
 `process-event-queue` accepts a JSON array of events and reports queue-level metrics while persisting one result file per event.
 The inbox commands provide a persistent event queue under `.aion/inbox`, so runtime alerts can be enqueued and processed incrementally.
 The release commands persist staged rollout candidates under `.aion/releases` and support approval, phased advancement, rejection, and rollback.
+`plan-defense` renders runtime containment actions that should be applied before or alongside code rollout, such as gateway blocks, WAF rules, feature flags, and dependency pins.
 
 Example orchestration settings in `.aion.yaml`:
 

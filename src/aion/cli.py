@@ -409,6 +409,20 @@ def rollback_release(
     _exit_with_release_candidate(candidate, output)
 
 
+@app.command("plan-defense")
+def plan_defense(
+    result_path: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    result = OrchestrationResult(**json.loads(result_path.read_text(encoding="utf-8")))
+    if result.defense_plan is None:
+        event_root = _resolve_event_root(result.event)
+        orchestrator = _build_orchestrator(event_root)
+        context_profile = _load_context_profile_for_event(result.event, None)
+        result = orchestrator.process_event(result.event, context_profile, repo_root=event_root)
+    _exit_with_defense_plan(result.defense_plan, output)
+
+
 def _resolve_target_files(target: Path, extra_ignore_patterns: list[str] | None = None) -> list[Path]:
     extra_ignore_patterns = extra_ignore_patterns or []
     if target.is_file():
@@ -766,6 +780,8 @@ def _exit_with_orchestration_result(result: OrchestrationResult, output: str) ->
             for command in result.sandbox.command_results:
                 commands.add_row(command.command, "yes" if command.passed else "no", str(command.exit_code))
             stdout_console.print(commands)
+    if result.defense_plan is not None:
+        _render_defense_plan(result.defense_plan)
 
     for warning in result.warnings:
         stderr_console.print(f"[yellow]warning:[/yellow] {warning}")
@@ -884,6 +900,31 @@ def _exit_with_release_candidates(candidates: list[ReleaseCandidate], output: st
         table.add_row(candidate.candidate_id, candidate.state, candidate.recommendation, candidate.target_file)
     stdout_console.print(table)
     raise typer.Exit(code=0)
+
+
+def _exit_with_defense_plan(defense_plan, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(defense_plan.model_dump_json())
+        raise typer.Exit(code=0)
+    _render_defense_plan(defense_plan)
+    raise typer.Exit(code=0)
+
+
+def _render_defense_plan(defense_plan) -> None:
+    stdout_console.print(Panel(defense_plan.strategy, title="Defense Strategy"))
+    table = Table(title="Defense Actions")
+    table.add_column("Type")
+    table.add_column("Target")
+    table.add_column("Rationale")
+    for action in defense_plan.actions:
+        table.add_row(action.action_type, action.target, action.rationale)
+    stdout_console.print(table)
+    if defense_plan.notes:
+        notes = Table(title="Defense Notes")
+        notes.add_column("Note")
+        for note in defense_plan.notes:
+            notes.add_row(note)
+        stdout_console.print(notes)
 
 
 def _exit_with_repair_eval(results, metrics, output: str) -> None:

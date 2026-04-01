@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from .config import AppConfig
+from .defense import RuntimeDefensePlanner
 from .models import (
     CommandExecutionResult,
     ContextProfile,
@@ -198,12 +199,14 @@ class Orchestrator:
         verifier: Verifier | None = None,
         policy_engine: PolicyEngine | None = None,
         sandbox_executor: SandboxExecutor | None = None,
+        defense_planner: RuntimeDefensePlanner | None = None,
     ):
         self.detector = detector or IncidentDetector()
         self.generator = generator or PatchGenerator()
         self.verifier = verifier or Verifier()
         self.policy_engine = policy_engine or PolicyEngine()
         self.sandbox_executor = sandbox_executor or SandboxExecutor(self.verifier)
+        self.defense_planner = defense_planner or RuntimeDefensePlanner()
 
     @classmethod
     def from_config(
@@ -277,6 +280,7 @@ class Orchestrator:
         result = OrchestrationResult(event=event, policy=policy, incidents=incidents)
 
         if policy.action != "auto_repair_sandbox":
+            result.defense_plan = self.defense_planner.plan(event, incidents, rollout=None)
             return result
 
         artifact = self.generator.generate(target, incidents, context_profile)
@@ -287,6 +291,7 @@ class Orchestrator:
 
         sandbox = self.sandbox_executor.execute(artifact, repo_root=repo_root)
         result.sandbox = sandbox
+        result.defense_plan = self.defense_planner.plan(event, incidents, rollout=sandbox.rollout)
         if sandbox.verification is not None and sandbox.verification.verdict != "verified_fix":
             result.warnings.append("Sandbox verification did not produce a verified fix.")
         return result
