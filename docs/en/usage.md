@@ -31,6 +31,22 @@ uv run aion scan ./path/to/project --output json
 uv run aion scan ./path/to/project --verbose
 ```
 
+Repair and verification flow:
+
+```bash
+uv run aion repair ./path/to/file.py \
+  --context-file ./context.json \
+  --artifact-path ./artifact.json
+
+uv run aion verify --artifact-path ./artifact.json
+
+uv run aion run-incident ./path/to/file.py \
+  --context-file ./context.json \
+  --output json
+```
+
+The current autonomy release generates patch artifacts and verifies them locally. It does not rewrite production files in place.
+
 Verbose mode prints the extracted context profile, Semgrep findings, fallback reasons,
 and token estimates to stderr.
 
