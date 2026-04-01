@@ -57,6 +57,7 @@ uv run aion process-event ./event.json \
 uv run aion process-event-queue ./events.json \
   --results-dir ./queue-results \
   --output json
+<<<<<<< HEAD
 
 uv run aion enqueue-event ./event.json \
   --inbox-root ./.aion/inbox
@@ -90,16 +91,21 @@ uv run aion rollback-release <candidate-id> \
 
 uv run aion plan-defense ./.aion/inbox/results/<event>.json \
   --output json
+=======
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 ```
 
 The current autonomy release generates patch artifacts and verifies them locally. It does not rewrite production files in place.
 `repair-eval` runs the deterministic repair pipeline across fixture cases and reports repair success rate, verification pass rate, false-fix rate, and rollback rate.
 `process-event` is the staged orchestration entrypoint. It accepts an event payload, applies policy gating, and only runs approved remediations inside a sandbox workspace.
 `process-event-queue` accepts a JSON array of events and reports queue-level metrics while persisting one result file per event.
+<<<<<<< HEAD
 The inbox commands provide a persistent event queue under `.aion/inbox`, so runtime alerts can be enqueued and processed incrementally.
 `serve-webhook` exposes `POST /events` and stores accepted events in the inbox for asynchronous processing.
 The release commands persist staged rollout candidates under `.aion/releases` and support approval, phased advancement, rejection, and rollback.
 `plan-defense` renders runtime containment actions that should be applied before or alongside code rollout, such as gateway blocks, WAF rules, feature flags, and dependency pins.
+=======
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 
 Example orchestration settings in `.aion.yaml`:
 

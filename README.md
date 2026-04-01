@@ -49,6 +49,7 @@ uv run aion run-incident ./path/to/file.py --context-file ./context.json --outpu
 uv run aion repair-eval ./tests/fixtures --records-dir ./repair-records --output json
 uv run aion process-event ./event.json --result-path ./orchestration.json --output json
 uv run aion process-event-queue ./events.json --results-dir ./queue-results --output json
+<<<<<<< HEAD
 uv run aion enqueue-event ./event.json --inbox-root ./.aion/inbox
 uv run aion process-inbox --inbox-root ./.aion/inbox --output json
 uv run aion create-release-candidate ./.aion/inbox/results/<event>.json --releases-root ./.aion/releases
@@ -56,6 +57,8 @@ uv run aion approve-release <candidate-id> --approver alice --releases-root ./.a
 uv run aion advance-release <candidate-id> --releases-root ./.aion/releases
 uv run aion plan-defense ./.aion/inbox/results/<event>.json --output json
 uv run aion serve-webhook --inbox-root ./.aion/inbox --host 127.0.0.1 --port 8080
+=======
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 ```
 
 ## Config File
@@ -93,6 +96,7 @@ CLI flags still override config values.
 - `process-event` is the current control-plane prototype: it ingests an event payload, applies policy gating, and runs approved remediations in a sandbox workspace.
 - `.aion.yaml` now controls auto-repair issue allowlists, minimum confidence, and sandbox mode (`file` or `repository`) for orchestration commands.
 - `process-event-queue` processes a JSON array of events, persists per-event results, and reports aggregate queue metrics.
+<<<<<<< HEAD
 - `enqueue-event`, `list-inbox`, and `process-inbox` provide a persistent file-backed inbox so orchestration can consume events incrementally instead of only from ad hoc JSON arrays.
 - `serve-webhook` exposes `POST /events` and writes accepted payloads straight into the inbox for near-real-time orchestration.
 - Sandbox orchestration can now run project-specific verification commands and emit a rollout recommendation: `approved_for_rollout`, `rollback`, or `needs_human_review`.
@@ -106,6 +110,9 @@ CLI flags still override config values.
 - Policy-gated orchestration, inbox/webhook ingress, sandbox execution, and queue processing: implemented
 - Release candidate approval, staged rollout, rollback, and runtime containment planning: implemented in the local control plane
 - Real production integrations such as external queues, gateways, WAF APIs, feature flag providers, and live deploy systems remain adapter work on top of the shipped interfaces
+=======
+- Sandbox orchestration can now run project-specific verification commands and emit a rollout recommendation: `approved_for_rollout`, `rollback`, or `needs_human_review`.
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 
 ## Tests
 

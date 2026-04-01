@@ -13,9 +13,12 @@ EventType = Literal["code_scan", "runtime_alert", "dependency_alert"]
 PolicyAction = Literal["auto_repair_sandbox", "needs_human_review", "blocked"]
 SandboxMode = Literal["file", "repository"]
 RolloutRecommendation = Literal["approved_for_rollout", "rollback", "needs_human_review"]
+<<<<<<< HEAD
 InboxStatus = Literal["pending", "processed", "failed"]
 ReleaseState = Literal["candidate", "approved", "executing", "completed", "rejected", "rolled_back"]
 DefenseActionType = Literal["feature_flag", "gateway_block", "waf_rule", "code_patch", "dependency_pin"]
+=======
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 
 
 class ContextProfile(BaseModel):
@@ -169,6 +172,7 @@ class CommandExecutionResult(BaseModel):
 class RolloutDecision(BaseModel):
     recommendation: RolloutRecommendation
     reasons: list[str] = Field(default_factory=list)
+<<<<<<< HEAD
 
 
 class RolloutPhase(BaseModel):
@@ -201,6 +205,8 @@ class DefensePlan(BaseModel):
     strategy: str
     actions: list[DefenseAction] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+=======
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 
 
 class ScanReport(BaseModel):
@@ -278,6 +284,7 @@ class EventQueueSummary(BaseModel):
     rollback_count: int = 0
 
 
+<<<<<<< HEAD
 class InboxItem(BaseModel):
     item_id: str
     status: InboxStatus = "pending"
@@ -288,6 +295,8 @@ class InboxItem(BaseModel):
     error: str | None = None
 
 
+=======
+>>>>>>> 1963707 (Add queued sandbox verification and rollout policy controls)
 def normalize_path(path: Path) -> str:
     try:
         return str(path.resolve())
