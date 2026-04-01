@@ -26,6 +26,7 @@ from .models import (
     OrchestrationEvent,
     PatchArtifact,
     ProjectScanSummary,
+    ReleaseCandidate,
     RepairAttemptRecord,
     RepairSession,
     RunIncidentResult,
@@ -35,6 +36,7 @@ from .models import (
 )
 from .orchestrator import Orchestrator
 from .repair import IncidentDetector, PatchGenerator, RepairExecutor, Verifier
+from .release_manager import ReleaseManager
 from .risk_heuristics import fallback_reasons
 from .semgrep_runner import SemgrepError, SemgrepRunner, semgrep_available
 
@@ -339,6 +341,72 @@ def process_inbox(
             inbox.mark_failed(item, str(exc))
 
     _exit_with_event_queue_results(results, summary, output)
+
+
+@app.command("create-release-candidate")
+def create_release_candidate(
+    result_path: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    result = OrchestrationResult(**payload)
+    candidate = ReleaseManager(releases_root).create_candidate(result)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("list-releases")
+def list_releases(
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    state: str | None = typer.Option(None, "--state", help="candidate, approved, executing, completed, rejected, rolled_back"),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidates = ReleaseManager(releases_root).list_candidates(state=state)
+    _exit_with_release_candidates(candidates, output)
+
+
+@app.command("approve-release")
+def approve_release(
+    candidate_id: str = typer.Argument(...),
+    approver: str = typer.Option(..., "--approver"),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).approve(candidate_id, approver)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("reject-release")
+def reject_release(
+    candidate_id: str = typer.Argument(...),
+    approver: str = typer.Option(..., "--approver"),
+    reason: str = typer.Option(..., "--reason"),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).reject(candidate_id, approver, reason)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("advance-release")
+def advance_release(
+    candidate_id: str = typer.Argument(...),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).advance(candidate_id)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("rollback-release")
+def rollback_release(
+    candidate_id: str = typer.Argument(...),
+    reason: str = typer.Option(..., "--reason"),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).rollback(candidate_id, reason)
+    _exit_with_release_candidate(candidate, output)
 
 
 def _resolve_target_files(target: Path, extra_ignore_patterns: list[str] | None = None) -> list[Path]:
@@ -777,6 +845,43 @@ def _exit_with_inbox_items(items: list[InboxItem], output: str) -> None:
     table.add_column("Target")
     for item in items:
         table.add_row(item.item_id, item.status, item.event.event_type, item.event.target_file)
+    stdout_console.print(table)
+    raise typer.Exit(code=0)
+
+
+def _exit_with_release_candidate(candidate: ReleaseCandidate, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(candidate.model_dump_json())
+        raise typer.Exit(code=0)
+
+    phases = ", ".join(f"{phase.name}:{phase.percentage}%{'*' if phase.completed else ''}" for phase in candidate.phases)
+    stdout_console.print(
+        Panel(
+            (
+                f"Candidate: {candidate.candidate_id}\n"
+                f"State: {candidate.state}\n"
+                f"Recommendation: {candidate.recommendation}\n"
+                f"Target: {candidate.target_file}\n"
+                f"Phases: {phases or '-'}"
+            ),
+            title="AION Release",
+        )
+    )
+    raise typer.Exit(code=0)
+
+
+def _exit_with_release_candidates(candidates: list[ReleaseCandidate], output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(json.dumps([candidate.model_dump() for candidate in candidates]))
+        raise typer.Exit(code=0)
+
+    table = Table(title="AION Releases")
+    table.add_column("Candidate")
+    table.add_column("State")
+    table.add_column("Recommendation")
+    table.add_column("Target")
+    for candidate in candidates:
+        table.add_row(candidate.candidate_id, candidate.state, candidate.recommendation, candidate.target_file)
     stdout_console.print(table)
     raise typer.Exit(code=0)
 

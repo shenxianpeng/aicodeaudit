@@ -68,6 +68,20 @@ uv run aion list-inbox \
 uv run aion process-inbox \
   --inbox-root ./.aion/inbox \
   --output json
+
+uv run aion create-release-candidate ./.aion/inbox/results/<event>.json \
+  --releases-root ./.aion/releases
+
+uv run aion approve-release <candidate-id> \
+  --approver alice \
+  --releases-root ./.aion/releases
+
+uv run aion advance-release <candidate-id> \
+  --releases-root ./.aion/releases
+
+uv run aion rollback-release <candidate-id> \
+  --reason "failed canary metrics" \
+  --releases-root ./.aion/releases
 ```
 
 The current autonomy release generates patch artifacts and verifies them locally. It does not rewrite production files in place.
@@ -75,6 +89,7 @@ The current autonomy release generates patch artifacts and verifies them locally
 `process-event` is the staged orchestration entrypoint. It accepts an event payload, applies policy gating, and only runs approved remediations inside a sandbox workspace.
 `process-event-queue` accepts a JSON array of events and reports queue-level metrics while persisting one result file per event.
 The inbox commands provide a persistent event queue under `.aion/inbox`, so runtime alerts can be enqueued and processed incrementally.
+The release commands persist staged rollout candidates under `.aion/releases` and support approval, phased advancement, rejection, and rollback.
 
 Example orchestration settings in `.aion.yaml`:
 

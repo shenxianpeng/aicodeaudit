@@ -44,6 +44,9 @@ uv run aion process-event ./event.json --result-path ./orchestration.json --outp
 uv run aion process-event-queue ./events.json --results-dir ./queue-results --output json
 uv run aion enqueue-event ./event.json --inbox-root ./.aion/inbox
 uv run aion process-inbox --inbox-root ./.aion/inbox --output json
+uv run aion create-release-candidate ./.aion/inbox/results/<event>.json --releases-root ./.aion/releases
+uv run aion approve-release <candidate-id> --approver alice --releases-root ./.aion/releases
+uv run aion advance-release <candidate-id> --releases-root ./.aion/releases
 ```
 
 ## Config File
@@ -83,6 +86,7 @@ CLI flags still override config values.
 - `process-event-queue` processes a JSON array of events, persists per-event results, and reports aggregate queue metrics.
 - `enqueue-event`, `list-inbox`, and `process-inbox` provide a persistent file-backed inbox so orchestration can consume events incrementally instead of only from ad hoc JSON arrays.
 - Sandbox orchestration can now run project-specific verification commands and emit a rollout recommendation: `approved_for_rollout`, `rollback`, or `needs_human_review`.
+- `create-release-candidate`, `approve-release`, `advance-release`, `reject-release`, and `rollback-release` implement a staged rollout state machine with canary/broad/full phases.
 
 ## Tests
 

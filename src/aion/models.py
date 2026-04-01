@@ -14,6 +14,7 @@ PolicyAction = Literal["auto_repair_sandbox", "needs_human_review", "blocked"]
 SandboxMode = Literal["file", "repository"]
 RolloutRecommendation = Literal["approved_for_rollout", "rollback", "needs_human_review"]
 InboxStatus = Literal["pending", "processed", "failed"]
+ReleaseState = Literal["candidate", "approved", "executing", "completed", "rejected", "rolled_back"]
 
 
 class ContextProfile(BaseModel):
@@ -167,6 +168,25 @@ class CommandExecutionResult(BaseModel):
 class RolloutDecision(BaseModel):
     recommendation: RolloutRecommendation
     reasons: list[str] = Field(default_factory=list)
+
+
+class RolloutPhase(BaseModel):
+    name: str
+    percentage: int
+    completed: bool = False
+
+
+class ReleaseCandidate(BaseModel):
+    candidate_id: str
+    created_at: str
+    source_event_id: str
+    target_file: str
+    recommendation: RolloutRecommendation
+    state: ReleaseState = "candidate"
+    phases: list[RolloutPhase] = Field(default_factory=list)
+    current_phase_index: int = 0
+    approvals: list[str] = Field(default_factory=list)
+    history: list[str] = Field(default_factory=list)
 
 
 class ScanReport(BaseModel):
