@@ -18,6 +18,7 @@ from .evaluation import compute_repair_metrics, evaluate_repair_cases, load_fixt
 from .llm_analyzer import LLMAnalyzer, LLMAnalyzerError
 from .models import (
     ContextProfile,
+    EventQueueSummary,
     Finding,
     OrchestrationResult,
     OrchestrationEvent,
@@ -229,15 +230,71 @@ def process_event(
     cleanup_sandbox: bool = typer.Option(False, "--cleanup-sandbox/--keep-sandbox", help="Remove sandbox workspace after processing."),
 ) -> None:
     payload = json.loads(event_file.read_text(encoding="utf-8"))
-    orchestrator = Orchestrator()
-    event = orchestrator.ingest_event(payload)
+    event = Orchestrator().ingest_event(payload)
+    repo_root = _resolve_event_root(event)
+    orchestrator = _build_orchestrator(repo_root)
     context_profile = _load_context_profile_for_event(event, context_file)
-    result = orchestrator.process_event(event, context_profile)
+    result = orchestrator.process_event(event, context_profile, repo_root=repo_root)
     if result_path is not None:
         result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
     if cleanup_sandbox:
         orchestrator.cleanup_sandbox(result)
     _exit_with_orchestration_result(result, output)
+
+
+@app.command("process-event-queue")
+def process_event_queue(
+    queue_file: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    results_dir: Path | None = typer.Option(None, "--results-dir", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+    cleanup_sandbox: bool = typer.Option(False, "--cleanup-sandbox/--keep-sandbox", help="Remove sandbox workspaces after processing."),
+) -> None:
+    payload = json.loads(queue_file.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise typer.BadParameter("queue file must contain a JSON array of events")
+
+    events = [Orchestrator().ingest_event(item) for item in payload]
+    orchestrators: dict[str, Orchestrator] = {}
+
+    def context_loader(event: OrchestrationEvent) -> ContextProfile:
+        metadata_context = event.metadata.get("context_file")
+        context_path = Path(str(metadata_context)).resolve() if metadata_context else None
+        return _load_context_profile_for_event(event, context_path)
+
+    def repo_root_loader(event: OrchestrationEvent) -> Path:
+        return _resolve_event_root(event)
+
+    results: list[OrchestrationResult] = []
+    summary = EventQueueSummary(total_events=len(events))
+
+    for event in events:
+        repo_root = repo_root_loader(event)
+        key = normalize_path(repo_root)
+        orchestrator = orchestrators.setdefault(key, _build_orchestrator(repo_root))
+        context_profile = context_loader(event)
+        result = orchestrator.process_event(event, context_profile, repo_root=repo_root)
+        results.append(result)
+        if result.policy.action == "auto_repair_sandbox":
+            summary.auto_repair_count += 1
+        elif result.policy.action == "needs_human_review":
+            summary.human_review_count += 1
+        elif result.policy.action == "blocked":
+            summary.blocked_count += 1
+        if result.sandbox is not None and result.sandbox.verification is not None and result.sandbox.verification.verdict == "verified_fix":
+            summary.verified_count += 1
+        if result.sandbox is not None and result.sandbox.rollout is not None:
+            if result.sandbox.rollout.recommendation == "approved_for_rollout":
+                summary.approved_count += 1
+            elif result.sandbox.rollout.recommendation == "rollback":
+                summary.rollback_count += 1
+        if results_dir is not None:
+            results_dir.mkdir(parents=True, exist_ok=True)
+            result_path = results_dir / f"{event.event_id}.json"
+            result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        if cleanup_sandbox:
+            orchestrator.cleanup_sandbox(result)
+
+    _exit_with_event_queue_results(results, summary, output)
 
 
 def _resolve_target_files(target: Path, extra_ignore_patterns: list[str] | None = None) -> list[Path]:
@@ -416,6 +473,18 @@ def _load_context_profile_for_event(event: OrchestrationEvent, context_file: Pat
     return _load_context_profile(Path(event.target_file), None)
 
 
+def _resolve_event_root(event: OrchestrationEvent) -> Path:
+    repo_root = event.metadata.get("repo_root")
+    if repo_root:
+        return Path(str(repo_root)).resolve()
+    return Path(event.target_file).resolve().parent
+
+
+def _build_orchestrator(root: Path) -> Orchestrator:
+    config = load_app_config(root)
+    return Orchestrator.from_config(config)
+
+
 def _build_repair_session(target: Path, context_profile: ContextProfile) -> RepairSession:
     detector = IncidentDetector()
     generator = PatchGenerator()
@@ -547,20 +616,78 @@ def _exit_with_orchestration_result(result: OrchestrationResult, output: str) ->
 
     if result.sandbox is not None:
         verdict = result.sandbox.verification.verdict if result.sandbox.verification is not None else "-"
+        rollout = result.sandbox.rollout.recommendation if result.sandbox.rollout is not None else "-"
         stdout_console.print(
             Panel(
                 (
                     f"Workspace: {result.sandbox.workspace_root}\n"
+                    f"Repo root: {result.sandbox.staged_repo_root}\n"
                     f"Staged file: {result.sandbox.staged_target_file}\n"
                     f"Patch applied: {result.sandbox.patch_applied}\n"
-                    f"Verdict: {verdict}"
+                    f"Verdict: {verdict}\n"
+                    f"Rollout: {rollout}"
                 ),
                 title="Sandbox",
             )
         )
+        if result.sandbox.command_results:
+            commands = Table(title="Sandbox Commands")
+            commands.add_column("Command")
+            commands.add_column("Passed")
+            commands.add_column("Exit")
+            for command in result.sandbox.command_results:
+                commands.add_row(command.command, "yes" if command.passed else "no", str(command.exit_code))
+            stdout_console.print(commands)
 
     for warning in result.warnings:
         stderr_console.print(f"[yellow]warning:[/yellow] {warning}")
+    raise typer.Exit(code=0)
+
+
+def _exit_with_event_queue_results(results: list[OrchestrationResult], summary: EventQueueSummary, output: str) -> None:
+    payload = {
+        "summary": summary.model_dump(),
+        "results": [result.model_dump() for result in results],
+    }
+    if output == "json":
+        stdout_console.print_json(json.dumps(payload))
+        raise typer.Exit(code=0)
+
+    stdout_console.print(
+        Panel(
+            (
+                f"Events: {summary.total_events}\n"
+                f"Auto repair: {summary.auto_repair_count}\n"
+                f"Human review: {summary.human_review_count}\n"
+                f"Blocked: {summary.blocked_count}\n"
+                f"Verified: {summary.verified_count}\n"
+                f"Approved: {summary.approved_count}\n"
+                f"Rollback: {summary.rollback_count}"
+            ),
+            title="AION Event Queue",
+        )
+    )
+    table = Table(title="Queue Results")
+    table.add_column("Event")
+    table.add_column("Type")
+    table.add_column("Policy")
+    table.add_column("Verified")
+    table.add_column("Rollout")
+    for result in results:
+        verified = (
+            result.sandbox is not None
+            and result.sandbox.verification is not None
+            and result.sandbox.verification.verdict == "verified_fix"
+        )
+        rollout = result.sandbox.rollout.recommendation if result.sandbox is not None and result.sandbox.rollout is not None else "-"
+        table.add_row(
+            result.event.event_id,
+            result.event.event_type,
+            result.policy.action,
+            "yes" if verified else "no",
+            rollout,
+        )
+    stdout_console.print(table)
     raise typer.Exit(code=0)
 
 

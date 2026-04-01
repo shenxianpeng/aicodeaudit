@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -107,10 +108,81 @@ def test_orchestrator_process_event_runs_in_sandbox(monkeypatch: pytest.MonkeyPa
     assert result.policy.action == "auto_repair_sandbox"
     assert result.sandbox is not None
     assert Path(result.sandbox.staged_target_file).exists()
+    assert result.sandbox.mode == "file"
     assert result.sandbox.verification is not None
     assert result.sandbox.verification.verdict == "verified_fix"
     orchestrator.cleanup_sandbox(result)
     assert not Path(result.sandbox.workspace_root).exists()
+
+
+def test_orchestrator_from_config_uses_repository_sandbox(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    repo_root = tmp_path / "demo-repo"
+    repo_root.mkdir()
+    source_path = repo_root / "service.py"
+    source_path.write_text(Path("tests/fixtures/vulnerable/02_hardcoded_secret.py").read_text(encoding="utf-8"), encoding="utf-8")
+    context_path = repo_root / "context.json"
+    context_path.write_text(Path("tests/fixtures/vulnerable/02_context.json").read_text(encoding="utf-8"), encoding="utf-8")
+
+    from aion.config import AppConfig
+
+    orchestrator = Orchestrator.from_config(
+        AppConfig(
+            sandbox_mode="repository",
+            sandbox_verification_commands=[f'{sys.executable} -c "print(\'sandbox-ok\')"'],
+            auto_approve_verified_fixes=True,
+        )
+    )
+    event = orchestrator.ingest_event(
+        {
+            "event_type": "runtime_alert",
+            "target_file": str(source_path.resolve()),
+            "metadata": {"repo_root": str(repo_root.resolve())},
+        }
+    )
+    result = orchestrator.process_event(event, _load_context(str(context_path)), repo_root=repo_root.resolve())
+
+    assert result.sandbox is not None
+    assert result.sandbox.mode == "repository"
+    assert f"{repo_root.name}/service.py" in result.sandbox.staged_target_file
+    assert result.sandbox.command_results[0].passed is True
+    assert result.sandbox.rollout is not None
+    assert result.sandbox.rollout.recommendation == "approved_for_rollout"
+    orchestrator.cleanup_sandbox(result)
+
+
+def test_orchestrator_rolls_back_when_sandbox_command_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    repo_root = tmp_path / "rollback-repo"
+    repo_root.mkdir()
+    source_path = repo_root / "service.py"
+    source_path.write_text(Path("tests/fixtures/vulnerable/01_raw_sqlite3.py").read_text(encoding="utf-8"), encoding="utf-8")
+    context_path = repo_root / "context.json"
+    context_path.write_text(Path("tests/fixtures/vulnerable/01_context.json").read_text(encoding="utf-8"), encoding="utf-8")
+
+    from aion.config import AppConfig
+
+    orchestrator = Orchestrator.from_config(
+        AppConfig(
+            sandbox_mode="repository",
+            sandbox_verification_commands=[f'{sys.executable} -c "import sys; sys.exit(2)"'],
+            rollback_on_verification_failure=True,
+        )
+    )
+    event = orchestrator.ingest_event(
+        {
+            "event_type": "runtime_alert",
+            "target_file": str(source_path.resolve()),
+            "metadata": {"repo_root": str(repo_root.resolve())},
+        }
+    )
+    result = orchestrator.process_event(event, _load_context(str(context_path)), repo_root=repo_root.resolve())
+
+    assert result.sandbox is not None
+    assert result.sandbox.command_results[0].passed is False
+    assert result.sandbox.rollout is not None
+    assert result.sandbox.rollout.recommendation == "rollback"
+    orchestrator.cleanup_sandbox(result)
 
 
 def test_repair_executor_records_attempt(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -208,3 +280,130 @@ def test_cli_process_event_outputs_json_and_persists_result(monkeypatch: pytest.
     assert payload["policy"]["action"] == "auto_repair_sandbox"
     assert payload["sandbox"]["verification"]["verdict"] == "verified_fix"
     assert json.loads(result_path.read_text(encoding="utf-8"))["policy"]["action"] == "auto_repair_sandbox"
+
+
+def test_cli_process_event_honors_repo_policy_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    runner = CliRunner()
+    repo_root = tmp_path / "policy-repo"
+    repo_root.mkdir()
+    (repo_root / ".aion.yaml").write_text(
+        "\n".join(
+            [
+                "auto_repair_issue_types:",
+                "  - raw_sqlite_query",
+                "auto_repair_min_confidence: 0.99",
+                "sandbox_mode: repository",
+                f"sandbox_verification_commands:\n  - {sys.executable} -c \"print('ok')\"",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    target = repo_root / "service.py"
+    target.write_text(Path("tests/fixtures/vulnerable/02_hardcoded_secret.py").read_text(encoding="utf-8"), encoding="utf-8")
+    context = repo_root / "context.json"
+    context.write_text(Path("tests/fixtures/vulnerable/02_context.json").read_text(encoding="utf-8"), encoding="utf-8")
+    event_path = tmp_path / "policy-event.json"
+    event_path.write_text(
+        json.dumps(
+            {
+                "event_type": "runtime_alert",
+                "target_file": str(target.resolve()),
+                "metadata": {
+                    "repo_root": str(repo_root.resolve()),
+                    "context_file": str(context.resolve()),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["process-event", str(event_path), "--output", "json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["policy"]["action"] == "needs_human_review"
+    assert payload["sandbox"] is None
+
+
+def test_cli_process_event_queue_uses_results_dir_and_cleanup(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    runner = CliRunner()
+
+    auto_repo = tmp_path / "auto-repo"
+    auto_repo.mkdir()
+    (auto_repo / ".aion.yaml").write_text(
+        "\n".join(
+            [
+                "sandbox_mode: repository",
+                f"sandbox_verification_commands:\n  - {sys.executable} -c \"print('queue-ok')\"",
+                "auto_approve_verified_fixes: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    auto_target = auto_repo / "service.py"
+    auto_target.write_text(Path("tests/fixtures/vulnerable/03_missing_auth_decorator.py").read_text(encoding="utf-8"), encoding="utf-8")
+    auto_context = auto_repo / "context.json"
+    auto_context.write_text(Path("tests/fixtures/vulnerable/03_context.json").read_text(encoding="utf-8"), encoding="utf-8")
+
+    review_repo = tmp_path / "review-repo"
+    review_repo.mkdir()
+    (review_repo / ".aion.yaml").write_text(
+        "\n".join(
+            [
+                "auto_repair_issue_types:",
+                "  - hardcoded_secret",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    review_target = review_repo / "service.py"
+    review_target.write_text(Path("tests/fixtures/vulnerable/01_raw_sqlite3.py").read_text(encoding="utf-8"), encoding="utf-8")
+    review_context = review_repo / "context.json"
+    review_context.write_text(Path("tests/fixtures/vulnerable/01_context.json").read_text(encoding="utf-8"), encoding="utf-8")
+
+    queue_path = tmp_path / "events.json"
+    queue_path.write_text(
+        json.dumps(
+            [
+                {
+                    "event_type": "runtime_alert",
+                    "target_file": str(auto_target.resolve()),
+                    "metadata": {
+                        "repo_root": str(auto_repo.resolve()),
+                        "context_file": str(auto_context.resolve()),
+                    },
+                },
+                {
+                    "event_type": "code_scan",
+                    "target_file": str(review_target.resolve()),
+                    "metadata": {
+                        "repo_root": str(review_repo.resolve()),
+                        "context_file": str(review_context.resolve()),
+                    },
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    results_dir = tmp_path / "queue-results"
+
+    result = runner.invoke(
+        app,
+        ["process-event-queue", str(queue_path), "--results-dir", str(results_dir), "--cleanup-sandbox", "--output", "json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["summary"]["total_events"] == 2
+    assert payload["summary"]["auto_repair_count"] == 1
+    assert payload["summary"]["human_review_count"] == 1
+    assert payload["summary"]["verified_count"] == 1
+    assert payload["summary"]["approved_count"] == 1
+    assert payload["summary"]["rollback_count"] == 0
+    assert len(list(results_dir.glob("*.json"))) == 2
+    sandbox_path = Path(payload["results"][0]["sandbox"]["workspace_root"])
+    assert not sandbox_path.exists()
+    assert payload["results"][0]["sandbox"]["rollout"]["recommendation"] == "approved_for_rollout"

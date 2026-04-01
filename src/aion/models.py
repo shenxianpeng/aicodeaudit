@@ -11,6 +11,8 @@ IncidentStatus = Literal["detected", "planned", "patched", "verified", "approved
 VerificationVerdict = Literal["verified_fix", "unsafe_patch", "needs_human_review"]
 EventType = Literal["code_scan", "runtime_alert", "dependency_alert"]
 PolicyAction = Literal["auto_repair_sandbox", "needs_human_review", "blocked"]
+SandboxMode = Literal["file", "repository"]
+RolloutRecommendation = Literal["approved_for_rollout", "rollback", "needs_human_review"]
 
 
 class ContextProfile(BaseModel):
@@ -142,10 +144,28 @@ class PolicyDecision(BaseModel):
 
 
 class SandboxExecutionResult(BaseModel):
+    mode: SandboxMode = "file"
     workspace_root: str
+    staged_repo_root: str
     staged_target_file: str
     patch_applied: bool = False
+    command_results: list[CommandExecutionResult] = Field(default_factory=list)
     verification: VerificationResult | None = None
+    rollout: RolloutDecision | None = None
+
+
+class CommandExecutionResult(BaseModel):
+    command: str
+    cwd: str
+    passed: bool
+    exit_code: int
+    stdout: str = ""
+    stderr: str = ""
+
+
+class RolloutDecision(BaseModel):
+    recommendation: RolloutRecommendation
+    reasons: list[str] = Field(default_factory=list)
 
 
 class ScanReport(BaseModel):
@@ -210,6 +230,16 @@ class OrchestrationResult(BaseModel):
     artifact: PatchArtifact | None = None
     sandbox: SandboxExecutionResult | None = None
     warnings: list[str] = Field(default_factory=list)
+
+
+class EventQueueSummary(BaseModel):
+    total_events: int
+    auto_repair_count: int = 0
+    human_review_count: int = 0
+    verified_count: int = 0
+    blocked_count: int = 0
+    approved_count: int = 0
+    rollback_count: int = 0
 
 
 def normalize_path(path: Path) -> str:

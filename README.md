@@ -41,6 +41,7 @@ uv run aion verify --artifact-path ./artifact.json
 uv run aion run-incident ./path/to/file.py --context-file ./context.json --output json
 uv run aion repair-eval ./tests/fixtures --records-dir ./repair-records --output json
 uv run aion process-event ./event.json --result-path ./orchestration.json --output json
+uv run aion process-event-queue ./events.json --results-dir ./queue-results --output json
 ```
 
 ## Config File
@@ -53,6 +54,15 @@ model: gpt-4.1
 ignore_paths:
   - tests/*
   - scripts/generated_*.py
+auto_repair_issue_types:
+  - raw_sqlite_query
+  - hardcoded_secret
+auto_repair_min_confidence: 0.90
+sandbox_mode: repository
+sandbox_verification_commands:
+  - python -m pytest tests/unit
+auto_approve_verified_fixes: false
+rollback_on_verification_failure: true
 ```
 
 CLI flags still override config values.
@@ -67,6 +77,9 @@ CLI flags still override config values.
 - Deterministic auto-repair currently covers raw sqlite f-string queries, hardcoded secrets, and missing auth decorators.
 - `repair` and `run-incident` can persist full repair attempt records for auditability, and `repair-eval` reports repair success, verification pass, false-fix, and rollback rates.
 - `process-event` is the current control-plane prototype: it ingests an event payload, applies policy gating, and runs approved remediations in a sandbox workspace.
+- `.aion.yaml` now controls auto-repair issue allowlists, minimum confidence, and sandbox mode (`file` or `repository`) for orchestration commands.
+- `process-event-queue` processes a JSON array of events, persists per-event results, and reports aggregate queue metrics.
+- Sandbox orchestration can now run project-specific verification commands and emit a rollout recommendation: `approved_for_rollout`, `rollback`, or `needs_human_review`.
 
 ## Tests
 
