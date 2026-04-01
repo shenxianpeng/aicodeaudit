@@ -11,6 +11,11 @@ IncidentStatus = Literal["detected", "planned", "patched", "verified", "approved
 VerificationVerdict = Literal["verified_fix", "unsafe_patch", "needs_human_review"]
 EventType = Literal["code_scan", "runtime_alert", "dependency_alert"]
 PolicyAction = Literal["auto_repair_sandbox", "needs_human_review", "blocked"]
+SandboxMode = Literal["file", "repository"]
+RolloutRecommendation = Literal["approved_for_rollout", "rollback", "needs_human_review"]
+InboxStatus = Literal["pending", "processed", "failed"]
+ReleaseState = Literal["candidate", "approved", "executing", "completed", "rejected", "rolled_back"]
+DefenseActionType = Literal["feature_flag", "gateway_block", "waf_rule", "code_patch", "dependency_pin"]
 
 
 class ContextProfile(BaseModel):
@@ -142,10 +147,60 @@ class PolicyDecision(BaseModel):
 
 
 class SandboxExecutionResult(BaseModel):
+    mode: SandboxMode = "file"
     workspace_root: str
+    staged_repo_root: str
     staged_target_file: str
     patch_applied: bool = False
+    command_results: list[CommandExecutionResult] = Field(default_factory=list)
     verification: VerificationResult | None = None
+    rollout: RolloutDecision | None = None
+
+
+class CommandExecutionResult(BaseModel):
+    command: str
+    cwd: str
+    passed: bool
+    exit_code: int
+    stdout: str = ""
+    stderr: str = ""
+
+
+class RolloutDecision(BaseModel):
+    recommendation: RolloutRecommendation
+    reasons: list[str] = Field(default_factory=list)
+
+
+class RolloutPhase(BaseModel):
+    name: str
+    percentage: int
+    completed: bool = False
+
+
+class ReleaseCandidate(BaseModel):
+    candidate_id: str
+    created_at: str
+    source_event_id: str
+    target_file: str
+    recommendation: RolloutRecommendation
+    state: ReleaseState = "candidate"
+    phases: list[RolloutPhase] = Field(default_factory=list)
+    current_phase_index: int = 0
+    approvals: list[str] = Field(default_factory=list)
+    history: list[str] = Field(default_factory=list)
+
+
+class DefenseAction(BaseModel):
+    action_type: DefenseActionType
+    target: str
+    rationale: str
+    parameters: dict[str, object] = Field(default_factory=dict)
+
+
+class DefensePlan(BaseModel):
+    strategy: str
+    actions: list[DefenseAction] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class ScanReport(BaseModel):
@@ -209,7 +264,28 @@ class OrchestrationResult(BaseModel):
     incidents: list[Incident] = Field(default_factory=list)
     artifact: PatchArtifact | None = None
     sandbox: SandboxExecutionResult | None = None
+    defense_plan: DefensePlan | None = None
     warnings: list[str] = Field(default_factory=list)
+
+
+class EventQueueSummary(BaseModel):
+    total_events: int
+    auto_repair_count: int = 0
+    human_review_count: int = 0
+    verified_count: int = 0
+    blocked_count: int = 0
+    approved_count: int = 0
+    rollback_count: int = 0
+
+
+class InboxItem(BaseModel):
+    item_id: str
+    status: InboxStatus = "pending"
+    event: OrchestrationEvent
+    created_at: str
+    processed_at: str | None = None
+    result_path: str | None = None
+    error: str | None = None
 
 
 def normalize_path(path: Path) -> str:

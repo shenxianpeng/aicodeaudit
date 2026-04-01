@@ -15,14 +15,18 @@ from rich.table import Table
 from .config import AppConfig, ConfigError, load_app_config
 from .context_extractor import ContextExtractor
 from .evaluation import compute_repair_metrics, evaluate_repair_cases, load_fixture_cases
+from .inbox import EventInbox
 from .llm_analyzer import LLMAnalyzer, LLMAnalyzerError
 from .models import (
     ContextProfile,
+    EventQueueSummary,
     Finding,
+    InboxItem,
     OrchestrationResult,
     OrchestrationEvent,
     PatchArtifact,
     ProjectScanSummary,
+    ReleaseCandidate,
     RepairAttemptRecord,
     RepairSession,
     RunIncidentResult,
@@ -32,8 +36,10 @@ from .models import (
 )
 from .orchestrator import Orchestrator
 from .repair import IncidentDetector, PatchGenerator, RepairExecutor, Verifier
+from .release_manager import ReleaseManager
 from .risk_heuristics import fallback_reasons
 from .semgrep_runner import SemgrepError, SemgrepRunner, semgrep_available
+from .webhook import WebhookEventServer
 
 app = typer.Typer(help="AION: The Self-Evolving Code Engine. Code Once, Live Forever.", no_args_is_help=True)
 stderr_console = Console(stderr=True)
@@ -229,15 +235,212 @@ def process_event(
     cleanup_sandbox: bool = typer.Option(False, "--cleanup-sandbox/--keep-sandbox", help="Remove sandbox workspace after processing."),
 ) -> None:
     payload = json.loads(event_file.read_text(encoding="utf-8"))
-    orchestrator = Orchestrator()
-    event = orchestrator.ingest_event(payload)
+    event = Orchestrator().ingest_event(payload)
+    repo_root = _resolve_event_root(event)
+    orchestrator = _build_orchestrator(repo_root)
     context_profile = _load_context_profile_for_event(event, context_file)
-    result = orchestrator.process_event(event, context_profile)
+    result = orchestrator.process_event(event, context_profile, repo_root=repo_root)
     if result_path is not None:
         result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
     if cleanup_sandbox:
         orchestrator.cleanup_sandbox(result)
     _exit_with_orchestration_result(result, output)
+
+
+@app.command("process-event-queue")
+def process_event_queue(
+    queue_file: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    results_dir: Path | None = typer.Option(None, "--results-dir", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+    cleanup_sandbox: bool = typer.Option(False, "--cleanup-sandbox/--keep-sandbox", help="Remove sandbox workspaces after processing."),
+) -> None:
+    payload = json.loads(queue_file.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise typer.BadParameter("queue file must contain a JSON array of events")
+
+    events = [Orchestrator().ingest_event(item) for item in payload]
+    orchestrators: dict[str, Orchestrator] = {}
+
+    def context_loader(event: OrchestrationEvent) -> ContextProfile:
+        metadata_context = event.metadata.get("context_file")
+        context_path = Path(str(metadata_context)).resolve() if metadata_context else None
+        return _load_context_profile_for_event(event, context_path)
+
+    def repo_root_loader(event: OrchestrationEvent) -> Path:
+        return _resolve_event_root(event)
+
+    results: list[OrchestrationResult] = []
+    summary = EventQueueSummary(total_events=len(events))
+
+    for event in events:
+        repo_root = repo_root_loader(event)
+        key = normalize_path(repo_root)
+        orchestrator = orchestrators.setdefault(key, _build_orchestrator(repo_root))
+        context_profile = context_loader(event)
+        result = orchestrator.process_event(event, context_profile, repo_root=repo_root)
+        results.append(result)
+        _accumulate_queue_summary(summary, result)
+        if results_dir is not None:
+            results_dir.mkdir(parents=True, exist_ok=True)
+            result_path = results_dir / f"{event.event_id}.json"
+            result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        if cleanup_sandbox:
+            orchestrator.cleanup_sandbox(result)
+
+    _exit_with_event_queue_results(results, summary, output)
+
+
+@app.command("enqueue-event")
+def enqueue_event(
+    event_file: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    payload = json.loads(event_file.read_text(encoding="utf-8"))
+    event = Orchestrator().ingest_event(payload)
+    item = EventInbox(inbox_root).enqueue(event)
+    _exit_with_inbox_item(item, output)
+
+
+@app.command("list-inbox")
+def list_inbox(
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    status: str | None = typer.Option(None, "--status", help="pending, processed, or failed"),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    items = EventInbox(inbox_root).list_items(status=status)
+    _exit_with_inbox_items(items, output)
+
+
+@app.command("process-inbox")
+def process_inbox(
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+    cleanup_sandbox: bool = typer.Option(False, "--cleanup-sandbox/--keep-sandbox", help="Remove sandbox workspaces after processing."),
+) -> None:
+    inbox = EventInbox(inbox_root)
+    pending = inbox.list_items(status="pending")
+    orchestrators: dict[str, Orchestrator] = {}
+    results: list[OrchestrationResult] = []
+    summary = EventQueueSummary(total_events=len(pending))
+
+    for item in pending:
+        try:
+            repo_root = _resolve_event_root(item.event)
+            key = normalize_path(repo_root)
+            orchestrator = orchestrators.setdefault(key, _build_orchestrator(repo_root))
+            context_profile = _load_context_profile_for_event(item.event, None)
+            result = orchestrator.process_event(item.event, context_profile, repo_root=repo_root)
+            result_path = inbox.result_file(item)
+            result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+            inbox.mark_processed(item, result_path)
+            results.append(result)
+            _accumulate_queue_summary(summary, result)
+            if cleanup_sandbox:
+                orchestrator.cleanup_sandbox(result)
+        except Exception as exc:  # noqa: BLE001
+            inbox.mark_failed(item, str(exc))
+
+    _exit_with_event_queue_results(results, summary, output)
+
+
+@app.command("create-release-candidate")
+def create_release_candidate(
+    result_path: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    result = OrchestrationResult(**payload)
+    candidate = ReleaseManager(releases_root).create_candidate(result)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("list-releases")
+def list_releases(
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    state: str | None = typer.Option(None, "--state", help="candidate, approved, executing, completed, rejected, rolled_back"),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidates = ReleaseManager(releases_root).list_candidates(state=state)
+    _exit_with_release_candidates(candidates, output)
+
+
+@app.command("approve-release")
+def approve_release(
+    candidate_id: str = typer.Argument(...),
+    approver: str = typer.Option(..., "--approver"),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).approve(candidate_id, approver)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("reject-release")
+def reject_release(
+    candidate_id: str = typer.Argument(...),
+    approver: str = typer.Option(..., "--approver"),
+    reason: str = typer.Option(..., "--reason"),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).reject(candidate_id, approver, reason)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("advance-release")
+def advance_release(
+    candidate_id: str = typer.Argument(...),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).advance(candidate_id)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("rollback-release")
+def rollback_release(
+    candidate_id: str = typer.Argument(...),
+    reason: str = typer.Option(..., "--reason"),
+    releases_root: Path = typer.Option(Path(".aion/releases"), "--releases-root", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    candidate = ReleaseManager(releases_root).rollback(candidate_id, reason)
+    _exit_with_release_candidate(candidate, output)
+
+
+@app.command("plan-defense")
+def plan_defense(
+    result_path: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    result = OrchestrationResult(**json.loads(result_path.read_text(encoding="utf-8")))
+    if result.defense_plan is None:
+        event_root = _resolve_event_root(result.event)
+        orchestrator = _build_orchestrator(event_root)
+        context_profile = _load_context_profile_for_event(result.event, None)
+        result = orchestrator.process_event(result.event, context_profile, repo_root=event_root)
+    _exit_with_defense_plan(result.defense_plan, output)
+
+
+@app.command("serve-webhook")
+def serve_webhook(
+    inbox_root: Path = typer.Option(Path(".aion/inbox"), "--inbox-root", resolve_path=True),
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8080, "--port"),
+    max_events: int | None = typer.Option(None, "--max-events", min=1),
+) -> None:
+    server = WebhookEventServer((host, port), inbox_root)
+    server.max_events = max_events
+    stdout_console.print(Panel(f"Listening on http://{host}:{server.server_port}/events", title="AION Webhook"))
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    raise typer.Exit(code=0)
 
 
 def _resolve_target_files(target: Path, extra_ignore_patterns: list[str] | None = None) -> list[Path]:
@@ -416,6 +619,34 @@ def _load_context_profile_for_event(event: OrchestrationEvent, context_file: Pat
     return _load_context_profile(Path(event.target_file), None)
 
 
+def _resolve_event_root(event: OrchestrationEvent) -> Path:
+    repo_root = event.metadata.get("repo_root")
+    if repo_root:
+        return Path(str(repo_root)).resolve()
+    return Path(event.target_file).resolve().parent
+
+
+def _build_orchestrator(root: Path) -> Orchestrator:
+    config = load_app_config(root)
+    return Orchestrator.from_config(config)
+
+
+def _accumulate_queue_summary(summary: EventQueueSummary, result: OrchestrationResult) -> None:
+    if result.policy.action == "auto_repair_sandbox":
+        summary.auto_repair_count += 1
+    elif result.policy.action == "needs_human_review":
+        summary.human_review_count += 1
+    elif result.policy.action == "blocked":
+        summary.blocked_count += 1
+    if result.sandbox is not None and result.sandbox.verification is not None and result.sandbox.verification.verdict == "verified_fix":
+        summary.verified_count += 1
+    if result.sandbox is not None and result.sandbox.rollout is not None:
+        if result.sandbox.rollout.recommendation == "approved_for_rollout":
+            summary.approved_count += 1
+        elif result.sandbox.rollout.recommendation == "rollback":
+            summary.rollback_count += 1
+
+
 def _build_repair_session(target: Path, context_profile: ContextProfile) -> RepairSession:
     detector = IncidentDetector()
     generator = PatchGenerator()
@@ -547,21 +778,173 @@ def _exit_with_orchestration_result(result: OrchestrationResult, output: str) ->
 
     if result.sandbox is not None:
         verdict = result.sandbox.verification.verdict if result.sandbox.verification is not None else "-"
+        rollout = result.sandbox.rollout.recommendation if result.sandbox.rollout is not None else "-"
         stdout_console.print(
             Panel(
                 (
                     f"Workspace: {result.sandbox.workspace_root}\n"
+                    f"Repo root: {result.sandbox.staged_repo_root}\n"
                     f"Staged file: {result.sandbox.staged_target_file}\n"
                     f"Patch applied: {result.sandbox.patch_applied}\n"
-                    f"Verdict: {verdict}"
+                    f"Verdict: {verdict}\n"
+                    f"Rollout: {rollout}"
                 ),
                 title="Sandbox",
             )
         )
+        if result.sandbox.command_results:
+            commands = Table(title="Sandbox Commands")
+            commands.add_column("Command")
+            commands.add_column("Passed")
+            commands.add_column("Exit")
+            for command in result.sandbox.command_results:
+                commands.add_row(command.command, "yes" if command.passed else "no", str(command.exit_code))
+            stdout_console.print(commands)
+    if result.defense_plan is not None:
+        _render_defense_plan(result.defense_plan)
 
     for warning in result.warnings:
         stderr_console.print(f"[yellow]warning:[/yellow] {warning}")
     raise typer.Exit(code=0)
+
+
+def _exit_with_event_queue_results(results: list[OrchestrationResult], summary: EventQueueSummary, output: str) -> None:
+    payload = {
+        "summary": summary.model_dump(),
+        "results": [result.model_dump() for result in results],
+    }
+    if output == "json":
+        stdout_console.print_json(json.dumps(payload))
+        raise typer.Exit(code=0)
+
+    stdout_console.print(
+        Panel(
+            (
+                f"Events: {summary.total_events}\n"
+                f"Auto repair: {summary.auto_repair_count}\n"
+                f"Human review: {summary.human_review_count}\n"
+                f"Blocked: {summary.blocked_count}\n"
+                f"Verified: {summary.verified_count}\n"
+                f"Approved: {summary.approved_count}\n"
+                f"Rollback: {summary.rollback_count}"
+            ),
+            title="AION Event Queue",
+        )
+    )
+    table = Table(title="Queue Results")
+    table.add_column("Event")
+    table.add_column("Type")
+    table.add_column("Policy")
+    table.add_column("Verified")
+    table.add_column("Rollout")
+    for result in results:
+        verified = (
+            result.sandbox is not None
+            and result.sandbox.verification is not None
+            and result.sandbox.verification.verdict == "verified_fix"
+        )
+        rollout = result.sandbox.rollout.recommendation if result.sandbox is not None and result.sandbox.rollout is not None else "-"
+        table.add_row(
+            result.event.event_id,
+            result.event.event_type,
+            result.policy.action,
+            "yes" if verified else "no",
+            rollout,
+        )
+    stdout_console.print(table)
+    raise typer.Exit(code=0)
+
+
+def _exit_with_inbox_item(item: InboxItem, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(item.model_dump_json())
+        raise typer.Exit(code=0)
+
+    stdout_console.print(
+        Panel(
+            f"Item: {item.item_id}\nStatus: {item.status}\nEvent: {item.event.event_type}\nTarget: {item.event.target_file}",
+            title="AION Inbox",
+        )
+    )
+    raise typer.Exit(code=0)
+
+
+def _exit_with_inbox_items(items: list[InboxItem], output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(json.dumps([item.model_dump() for item in items]))
+        raise typer.Exit(code=0)
+
+    table = Table(title="AION Inbox")
+    table.add_column("Item")
+    table.add_column("Status")
+    table.add_column("Event")
+    table.add_column("Target")
+    for item in items:
+        table.add_row(item.item_id, item.status, item.event.event_type, item.event.target_file)
+    stdout_console.print(table)
+    raise typer.Exit(code=0)
+
+
+def _exit_with_release_candidate(candidate: ReleaseCandidate, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(candidate.model_dump_json())
+        raise typer.Exit(code=0)
+
+    phases = ", ".join(f"{phase.name}:{phase.percentage}%{'*' if phase.completed else ''}" for phase in candidate.phases)
+    stdout_console.print(
+        Panel(
+            (
+                f"Candidate: {candidate.candidate_id}\n"
+                f"State: {candidate.state}\n"
+                f"Recommendation: {candidate.recommendation}\n"
+                f"Target: {candidate.target_file}\n"
+                f"Phases: {phases or '-'}"
+            ),
+            title="AION Release",
+        )
+    )
+    raise typer.Exit(code=0)
+
+
+def _exit_with_release_candidates(candidates: list[ReleaseCandidate], output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(json.dumps([candidate.model_dump() for candidate in candidates]))
+        raise typer.Exit(code=0)
+
+    table = Table(title="AION Releases")
+    table.add_column("Candidate")
+    table.add_column("State")
+    table.add_column("Recommendation")
+    table.add_column("Target")
+    for candidate in candidates:
+        table.add_row(candidate.candidate_id, candidate.state, candidate.recommendation, candidate.target_file)
+    stdout_console.print(table)
+    raise typer.Exit(code=0)
+
+
+def _exit_with_defense_plan(defense_plan, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(defense_plan.model_dump_json())
+        raise typer.Exit(code=0)
+    _render_defense_plan(defense_plan)
+    raise typer.Exit(code=0)
+
+
+def _render_defense_plan(defense_plan) -> None:
+    stdout_console.print(Panel(defense_plan.strategy, title="Defense Strategy"))
+    table = Table(title="Defense Actions")
+    table.add_column("Type")
+    table.add_column("Target")
+    table.add_column("Rationale")
+    for action in defense_plan.actions:
+        table.add_row(action.action_type, action.target, action.rationale)
+    stdout_console.print(table)
+    if defense_plan.notes:
+        notes = Table(title="Defense Notes")
+        notes.add_column("Note")
+        for note in defense_plan.notes:
+            notes.add_row(note)
+        stdout_console.print(notes)
 
 
 def _exit_with_repair_eval(results, metrics, output: str) -> None:

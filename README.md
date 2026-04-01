@@ -1,6 +1,10 @@
 # AION
 
+[![PyPI version](https://img.shields.io/pypi/v/aion-evolve)](https://pypi.org/project/aion-evolve/)
+[![CI](https://github.com/shenxianpeng/aion/actions/workflows/ci.yml/badge.svg)](https://github.com/shenxianpeng/aion/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/shenxianpeng/aion/graph/badge.svg?branch=main)](https://codecov.io/gh/shenxianpeng/aion)
 [![Docs](https://img.shields.io/badge/docs-github%20pages-blue)](https://shenxianpeng.github.io/aion/)
+[![Python](https://img.shields.io/pypi/pyversions/aion-evolve)](https://pypi.org/project/aion-evolve/)
 
 > **Code Once, Live Forever.**
 
@@ -8,7 +12,7 @@
 
 AI scans your code continuously, automatically rewrites outdated syntax and risky logic, and delivers an evolved codebase every day. Instead of treating every file in isolation, it builds a lightweight profile of the existing repository, runs `semgrep` as a fast first pass, and only asks the LLM to investigate files that have concrete risk signals or meaningful context gaps. The main differentiator is context-gap reporting, for example: "this file uses `sqlite3`, but the rest of the project uses `sqlalchemy` sessions."
 
-## Current MVP
+## Current Capabilities
 
 - Python-only scanning
 - Project context extraction via `ast`
@@ -19,7 +23,10 @@ AI scans your code continuously, automatically rewrites outdated syntax and risk
 - Rich terminal output and JSON output
 - Deterministic remediation planning for high-confidence Python issues
 - Patch artifact generation and standalone verification
-- Local orchestrator skeleton for `scan -> repair -> verify` incident handling
+- Persistent inbox and webhook ingress for event-driven orchestration
+- Policy-gated sandbox execution with project-level verification commands
+- Release candidate state machine with staged rollout and rollback handling
+- Runtime-first defense planning covering gateway, WAF, feature flags, dependency pins, and code patch follow-ups
 
 ## Install
 
@@ -41,6 +48,14 @@ uv run aion verify --artifact-path ./artifact.json
 uv run aion run-incident ./path/to/file.py --context-file ./context.json --output json
 uv run aion repair-eval ./tests/fixtures --records-dir ./repair-records --output json
 uv run aion process-event ./event.json --result-path ./orchestration.json --output json
+uv run aion process-event-queue ./events.json --results-dir ./queue-results --output json
+uv run aion enqueue-event ./event.json --inbox-root ./.aion/inbox
+uv run aion process-inbox --inbox-root ./.aion/inbox --output json
+uv run aion create-release-candidate ./.aion/inbox/results/<event>.json --releases-root ./.aion/releases
+uv run aion approve-release <candidate-id> --approver alice --releases-root ./.aion/releases
+uv run aion advance-release <candidate-id> --releases-root ./.aion/releases
+uv run aion plan-defense ./.aion/inbox/results/<event>.json --output json
+uv run aion serve-webhook --inbox-root ./.aion/inbox --host 127.0.0.1 --port 8080
 ```
 
 ## Config File
@@ -53,6 +68,15 @@ model: gpt-4.1
 ignore_paths:
   - tests/*
   - scripts/generated_*.py
+auto_repair_issue_types:
+  - raw_sqlite_query
+  - hardcoded_secret
+auto_repair_min_confidence: 0.90
+sandbox_mode: repository
+sandbox_verification_commands:
+  - python -m pytest tests/unit
+auto_approve_verified_fixes: false
+rollback_on_verification_failure: true
 ```
 
 CLI flags still override config values.
@@ -67,6 +91,21 @@ CLI flags still override config values.
 - Deterministic auto-repair currently covers raw sqlite f-string queries, hardcoded secrets, and missing auth decorators.
 - `repair` and `run-incident` can persist full repair attempt records for auditability, and `repair-eval` reports repair success, verification pass, false-fix, and rollback rates.
 - `process-event` is the current control-plane prototype: it ingests an event payload, applies policy gating, and runs approved remediations in a sandbox workspace.
+- `.aion.yaml` now controls auto-repair issue allowlists, minimum confidence, and sandbox mode (`file` or `repository`) for orchestration commands.
+- `process-event-queue` processes a JSON array of events, persists per-event results, and reports aggregate queue metrics.
+- `enqueue-event`, `list-inbox`, and `process-inbox` provide a persistent file-backed inbox so orchestration can consume events incrementally instead of only from ad hoc JSON arrays.
+- `serve-webhook` exposes `POST /events` and writes accepted payloads straight into the inbox for near-real-time orchestration.
+- Sandbox orchestration can now run project-specific verification commands and emit a rollout recommendation: `approved_for_rollout`, `rollback`, or `needs_human_review`.
+- `create-release-candidate`, `approve-release`, `advance-release`, `reject-release`, and `rollback-release` implement a staged rollout state machine with canary/broad/full phases.
+- `plan-defense` emits runtime-first containment actions such as gateway blocks, WAF rules, feature flags, dependency pins, and code patch follow-ups.
+
+## Roadmap Status
+
+- Detection and context-aware incident generation: implemented
+- Deterministic repair, verification, and repair evaluation: implemented
+- Policy-gated orchestration, inbox/webhook ingress, sandbox execution, and queue processing: implemented
+- Release candidate approval, staged rollout, rollback, and runtime containment planning: implemented in the local control plane
+- Real production integrations such as external queues, gateways, WAF APIs, feature flag providers, and live deploy systems remain adapter work on top of the shipped interfaces
 
 ## Tests
 
