@@ -3,7 +3,7 @@ requires = ["setuptools>=69", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "aion"
+name = "aion-evolve"
 dynamic = ["version"]
 description = "AION: The Self-Evolving Code Engine. Code Once, Live Forever."
 readme = "README.md"
