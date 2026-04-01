@@ -43,16 +43,43 @@ Current built-in deterministic repair paths cover:
 - hardcoded secrets
 - missing auth decorators
 
-## Next steps
+## Phased Roadmap
 
-Planned next milestones:
+### Phase 0 — Trusted Foundation
 
-1. Expand deterministic repair coverage to more Python security and code-quality patterns.
-2. Improve artifact verification with stronger policy checks and richer assertions.
-3. Add safe review-oriented workflows for exporting or handing off verified patches.
-4. Introduce repository-level orchestration beyond single-file incident handling.
-5. Explore controlled write-back and automation only after verification and approval boundaries are mature.
+- Upgrade scan results from "reports" to structured **incident objects**.
+- Establish a unified JSON schema so scan → repair → verify stages can be chained reliably.
+- Add fixtures that express the full chain: *vulnerability sample → expected patch → expected verification result*.
+- **Success criterion:** the repository can represent a complete incident lifecycle, not just print findings.
+
+### Phase 1 — Automatic Repair Closed Loop
+
+- Prioritise template-based (deterministic) repairs for well-understood issue classes.
+- Use the LLM only as a fallback when no template covers the pattern.
+- Auto-run after every patch: syntax validation, semgrep re-scan, and the minimal relevant test set.
+- **Success criterion:** for Python security issues covered by fixtures, AION automatically produces a patch and passes verification end-to-end.
+
+### Phase 2 — Self-Verification and Learning
+
+- Record every repair attempt: input, patch, verification outcome, and failure reason.
+- Build a *repair eval* that measures success rate, regression rate, and false-repair rate.
+- Distil rule templates and prompt strategies from failure samples.
+- **Success criterion:** evaluation covers not only "vulnerability detected" but also "repair correct".
+
+### Phase 3 — Pre-production Autonomy
+
+- Add an orchestrator prototype that consumes an event queue and drives the scan/repair/verify pipeline.
+- Support staging/sandbox repositories: apply patches automatically and run full verification.
+- Introduce policy gating: configure which issue categories allow automatic repair and which are suggestion-only.
+- **Success criterion:** the full incident-to-patch-conclusion loop completes without manual step-by-step intervention.
+
+### Phase 4 — Production Online Self-Healing
+
+- Ingest runtime attack and anomaly signals as incident triggers.
+- Introduce a policy engine with release gates, canary rollout, and automatic rollback.
+- Prioritise hot-fix actions (config / gateway / WAF / feature-flag changes) over in-place code replacement.
+- **Success criterion:** after an attack is detected, the system autonomously blocks, repairs, verifies, and rolls back — all within defined policy constraints.
 
 ## Guiding principle
 
-AION is moving toward self-evolving code, but the current phase prioritizes safety, determinism, and reviewability over aggressive automation.
+AION is moving toward self-evolving code, but every phase prioritises safety, determinism, and reviewability over aggressive automation.
