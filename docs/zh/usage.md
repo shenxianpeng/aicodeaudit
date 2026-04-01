@@ -31,6 +31,22 @@ uv run aion scan ./path/to/project --output json
 uv run aion scan ./path/to/project --verbose
 ```
 
+修复与验证闭环：
+
+```bash
+uv run aion repair ./path/to/file.py \
+  --context-file ./context.json \
+  --artifact-path ./artifact.json
+
+uv run aion verify --artifact-path ./artifact.json
+
+uv run aion run-incident ./path/to/file.py \
+  --context-file ./context.json \
+  --output json
+```
+
+当前首版自治能力只生成补丁 artifact 并在本地验证，不会直接原地改写生产文件。
+
 `--verbose` 会把上下文提取结果、Semgrep 结果、fallback 原因和 token 估算输出到 stderr。
 
 ## 推荐使用流程

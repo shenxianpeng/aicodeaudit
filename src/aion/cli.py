@@ -14,7 +14,19 @@ from rich.table import Table
 from .config import AppConfig, ConfigError, load_app_config
 from .context_extractor import ContextExtractor
 from .llm_analyzer import LLMAnalyzer, LLMAnalyzerError
-from .models import Finding, ProjectScanSummary, ScanReport, normalize_path
+from .models import (
+    ContextProfile,
+    Finding,
+    PatchArtifact,
+    ProjectScanSummary,
+    RepairSession,
+    RunIncidentResult,
+    ScanReport,
+    VerificationResult,
+    normalize_path,
+)
+from .orchestrator import Orchestrator
+from .repair import IncidentDetector, PatchGenerator, Verifier
 from .risk_heuristics import fallback_reasons
 from .semgrep_runner import SemgrepError, SemgrepRunner, semgrep_available
 
@@ -94,6 +106,7 @@ def scan(
         summary.warnings.append("semgrep is not installed; falling back to LLM-only mode.")
 
     analyzer = LLMAnalyzer(api_key=api_key, model=resolved_model, provider=resolved_provider.value, verbose=verbose)
+    detector = IncidentDetector()
 
     for file_path in files_to_scan:
         report = ScanReport(file=normalize_path(file_path), ai_generated=True)
@@ -134,10 +147,54 @@ def scan(
         except LLMAnalyzerError as exc:
             summary.warnings.append(f"LLM analysis failed for {file_path.name}: {exc}")
             report.mode = "semgrep-only" if has_semgrep else "skipped"
+        report.incidents = detector.detect(file_path, context_profile)
 
         summary.reports.append(report)
 
     _exit_with_summary(summary, output)
+
+
+@app.command()
+def repair(
+    target: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    context_file: Path | None = typer.Option(None, "--context-file", exists=True, readable=True, resolve_path=True),
+    artifact_path: Path | None = typer.Option(None, "--artifact-path", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+    plan_only: bool = typer.Option(True, "--plan/--apply", help="Emit a patch artifact without modifying the file."),
+) -> None:
+    if not plan_only:
+        raise typer.BadParameter("Only --plan is supported in the first autonomy release.")
+
+    context_profile = _load_context_profile(target, context_file)
+    session = _build_repair_session(target, context_profile)
+    if artifact_path and session.artifact is not None:
+        artifact_path.write_text(session.model_dump_json(indent=2), encoding="utf-8")
+    _exit_with_repair_session(session, output)
+
+
+@app.command()
+def verify(
+    artifact_path: Path = typer.Option(..., "--artifact-path", exists=True, readable=True, resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    artifact = PatchArtifact(**payload["artifact"])
+    verification = Verifier().verify(artifact)
+    _exit_with_verification(verification, output)
+
+
+@app.command("run-incident")
+def run_incident(
+    target: Path = typer.Argument(..., exists=True, readable=True, resolve_path=True),
+    context_file: Path | None = typer.Option(None, "--context-file", exists=True, readable=True, resolve_path=True),
+    artifact_path: Path | None = typer.Option(None, "--artifact-path", resolve_path=True),
+    output: str = typer.Option("text", "--output", help="text or json"),
+) -> None:
+    context_profile = _load_context_profile(target, context_file)
+    result = Orchestrator().run_incident(target, context_profile)
+    if artifact_path and result.session.artifact is not None:
+        artifact_path.write_text(result.session.model_dump_json(indent=2), encoding="utf-8")
+    _exit_with_run_incident(result, output)
 
 
 def _resolve_target_files(target: Path, extra_ignore_patterns: list[str] | None = None) -> list[Path]:
@@ -269,7 +326,7 @@ def _exit_with_summary(summary: ProjectScanSummary, output: str) -> None:
 
     stdout_console.print(
         Panel(
-            f"Target: {summary.target}\nFiles scanned: {summary.files_scanned}\nFindings: {summary.finding_count}",
+            f"Target: {summary.target}\nFiles scanned: {summary.files_scanned}\nFindings: {summary.finding_count}\nIncidents: {summary.incident_count}",
             title="AION",
         )
     )
@@ -297,6 +354,112 @@ def _exit_with_summary(summary: ProjectScanSummary, output: str) -> None:
 
     if not rendered:
         stdout_console.print("[green]No findings reported.[/green]")
+
+
+def _load_context_profile(target: Path, context_file: Path | None) -> ContextProfile:
+    if context_file is not None:
+        payload = json.loads(context_file.read_text(encoding="utf-8"))
+        return ContextProfile(**payload)
+    root = target if target.is_dir() else target.parent
+    return ContextExtractor(root=root).extract()
+
+
+def _build_repair_session(target: Path, context_profile: ContextProfile) -> RepairSession:
+    detector = IncidentDetector()
+    generator = PatchGenerator()
+    incidents = detector.detect(target, context_profile)
+    artifact = generator.generate(target, incidents, context_profile)
+    warnings: list[str] = []
+    if not incidents:
+        warnings.append("No actionable incidents were detected.")
+    if incidents and artifact is None:
+        warnings.append("Incidents were detected, but no deterministic patch could be generated.")
+    return RepairSession(target=normalize_path(target), incidents=incidents, artifact=artifact, warnings=warnings)
+
+
+def _exit_with_repair_session(session: RepairSession, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(session.model_dump_json())
+        raise typer.Exit(code=0)
+
+    for warning in session.warnings:
+        stderr_console.print(f"[yellow]warning:[/yellow] {warning}")
+
+    if not session.incidents:
+        stdout_console.print(Panel(f"Target: {session.target}\nNo actionable incidents detected.", title="AION Repair"))
+        raise typer.Exit(code=0)
+
+    incident_table = Table(title="Planned Incidents")
+    incident_table.add_column("Type")
+    incident_table.add_column("Severity")
+    incident_table.add_column("Line", justify="right")
+    incident_table.add_column("Strategy")
+    for incident in session.incidents:
+        incident_table.add_row(
+            incident.issue_type,
+            incident.severity,
+            str(incident.line),
+            incident.remediation_strategy or "needs_human_review",
+        )
+    stdout_console.print(incident_table)
+
+    if session.artifact is None:
+        stdout_console.print("[yellow]No patch artifact generated.[/yellow]")
+        raise typer.Exit(code=0)
+
+    stdout_console.print(Panel(f"Target: {session.target}\nApplied plans: {len(session.artifact.plans)}", title="Patch Artifact"))
+    stdout_console.print(session.artifact.diff or "[yellow]No diff produced.[/yellow]")
+    raise typer.Exit(code=0)
+
+
+def _exit_with_verification(verification: VerificationResult, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(verification.model_dump_json())
+        raise typer.Exit(code=0)
+
+    stdout_console.print(
+        Panel(
+            f"Verdict: {verification.verdict}\nSyntax: {verification.syntax_ok}\nSemgrep: {verification.semgrep_ok}\nAssertions: {verification.assertions_ok}",
+            title="AION Verify",
+        )
+    )
+    checks = Table(title="Verification Checks")
+    checks.add_column("Check")
+    checks.add_column("Passed")
+    checks.add_column("Details")
+    for check in verification.checks:
+        checks.add_row(check.name, "yes" if check.passed else "no", check.details)
+    stdout_console.print(checks)
+    if verification.failure_reasons:
+        for reason in verification.failure_reasons:
+            stderr_console.print(f"[yellow]warning:[/yellow] {reason}")
+    raise typer.Exit(code=0)
+
+
+def _exit_with_run_incident(result: RunIncidentResult, output: str) -> None:
+    if output == "json":
+        stdout_console.print_json(result.model_dump_json())
+        raise typer.Exit(code=0)
+
+    for warning in result.session.warnings:
+        stderr_console.print(f"[yellow]warning:[/yellow] {warning}")
+
+    stdout_console.print(
+        Panel(
+            f"Target: {result.session.target}\nIncidents: {len(result.session.incidents)}\nArtifact: {'yes' if result.session.artifact else 'no'}",
+            title="AION Run Incident",
+        )
+    )
+    if result.session.artifact is not None:
+        stdout_console.print(result.session.artifact.diff or "[yellow]No diff produced.[/yellow]")
+    if result.verification is not None:
+        stdout_console.print(
+            Panel(
+                f"Verdict: {result.verification.verdict}\nSyntax: {result.verification.syntax_ok}\nSemgrep: {result.verification.semgrep_ok}\nAssertions: {result.verification.assertions_ok}",
+                title="Verification",
+            )
+        )
+    raise typer.Exit(code=0)
 
 
 def _severity_sort_key(finding: Finding) -> tuple[int, int]:

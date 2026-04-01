@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 
 Severity = Literal["critical", "high", "medium", "low"]
+IncidentStatus = Literal["detected", "planned", "patched", "verified", "approved", "rejected"]
+VerificationVerdict = Literal["verified_fix", "unsafe_patch", "needs_human_review"]
 
 
 class ContextProfile(BaseModel):
@@ -55,10 +57,69 @@ class Finding(BaseModel):
     semgrep_rule: str | None = None
 
 
+class Incident(BaseModel):
+    id: str
+    source: Literal["scan", "heuristic", "runtime_event"] = "heuristic"
+    target_file: str
+    issue_type: str
+    issue: str
+    severity: Severity
+    line: int
+    evidence: list[str] = Field(default_factory=list)
+    confidence: float = 0.0
+    attack_surface: str = "code"
+    recommended_action: str = "review"
+    remediation_strategy: str | None = None
+    verification_strategy: list[str] = Field(default_factory=list)
+    status: IncidentStatus = "detected"
+
+
+class RemediationPlan(BaseModel):
+    incident_id: str
+    target_file: str
+    strategy: str
+    summary: str
+    planned_changes: list[str] = Field(default_factory=list)
+    verification_steps: list[str] = Field(default_factory=list)
+    rollback_condition: str = "verification_failed"
+    status: IncidentStatus = "planned"
+
+
+class PatchArtifact(BaseModel):
+    incident_ids: list[str] = Field(default_factory=list)
+    target_file: str
+    original_content: str
+    patched_content: str
+    diff: str
+    generator: Literal["template", "llm"] = "template"
+    plans: list[RemediationPlan] = Field(default_factory=list)
+    static_validation_passed: bool = False
+    status: IncidentStatus = "patched"
+
+
+class VerificationCheck(BaseModel):
+    name: str
+    passed: bool
+    details: str = ""
+
+
+class VerificationResult(BaseModel):
+    artifact: PatchArtifact
+    verdict: VerificationVerdict
+    syntax_ok: bool
+    semgrep_ok: bool
+    assertions_ok: bool
+    semgrep_findings: list[SemgrepFinding] = Field(default_factory=list)
+    checks: list[VerificationCheck] = Field(default_factory=list)
+    failure_reasons: list[str] = Field(default_factory=list)
+    status: IncidentStatus = "verified"
+
+
 class ScanReport(BaseModel):
     file: str
     findings: list[Finding] = Field(default_factory=list)
     semgrep_findings: list[SemgrepFinding] = Field(default_factory=list)
+    incidents: list[Incident] = Field(default_factory=list)
     ai_generated: bool = False
     mode: Literal["semgrep+llm", "llm-only", "semgrep-only", "skipped"] = "skipped"
 
@@ -77,6 +138,10 @@ class ProjectScanSummary(BaseModel):
     def finding_count(self) -> int:
         return sum(len(report.findings) for report in self.reports)
 
+    @property
+    def incident_count(self) -> int:
+        return sum(len(report.incidents) for report in self.reports)
+
     def sorted_reports(self) -> list[ScanReport]:
         return sorted(
             self.reports,
@@ -91,6 +156,18 @@ class ProjectScanSummary(BaseModel):
                 report.file,
             ),
         )
+
+
+class RepairSession(BaseModel):
+    target: str
+    incidents: list[Incident] = Field(default_factory=list)
+    artifact: PatchArtifact | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+
+class RunIncidentResult(BaseModel):
+    session: RepairSession
+    verification: VerificationResult | None = None
 
 
 def normalize_path(path: Path) -> str:
