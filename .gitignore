@@ -1,9 +1,11 @@
 __pycache__/
 .pytest_cache/
 .aicodeaudit-context.json
+.aion-context.json
 .coverage
 *.pyc
 
 src/aicodeaudit.egg-info/
+src/aion.egg-info/
 dist/
 site/
