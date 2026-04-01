@@ -999,6 +999,17 @@ uv run aion scan ./path/to/project --output json</code></p>
 <h2 id="_3">输出详细调试信息<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <p><code>bash
 uv run aion scan ./path/to/project --verbose</code></p>
+<p>修复与验证闭环：</p>
+<p>```bash
+uv run aion repair ./path/to/file.py \
+  --context-file ./context.json \
+  --artifact-path ./artifact.json</p>
+<p>uv run aion verify --artifact-path ./artifact.json</p>
+<p>uv run aion run-incident ./path/to/file.py \
+  --context-file ./context.json \
+  --output json
+```</p>
+<p>当前首版自治能力只生成补丁 artifact 并在本地验证，不会直接原地改写生产文件。</p>
 <p><code>--verbose</code> 会把上下文提取结果、Semgrep 结果、fallback 原因和 token 估算输出到 stderr。</p>
 <h2 id="_4">推荐使用流程<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <ol>

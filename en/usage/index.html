@@ -999,6 +999,17 @@ uv run aion scan ./path/to/project --output json</code></p>
 <h2 id="verbose-mode">Verbose mode<a class="headerlink" href="#verbose-mode" title="Permanent link">&para;</a></h2>
 <p><code>bash
 uv run aion scan ./path/to/project --verbose</code></p>
+<p>Repair and verification flow:</p>
+<p>```bash
+uv run aion repair ./path/to/file.py \
+  --context-file ./context.json \
+  --artifact-path ./artifact.json</p>
+<p>uv run aion verify --artifact-path ./artifact.json</p>
+<p>uv run aion run-incident ./path/to/file.py \
+  --context-file ./context.json \
+  --output json
+```</p>
+<p>The current autonomy release generates patch artifacts and verifies them locally. It does not rewrite production files in place.</p>
 <p>Verbose mode prints the extracted context profile, Semgrep findings, fallback reasons,
 and token estimates to stderr.</p>
 <h2 id="typical-workflow">Typical workflow<a class="headerlink" href="#typical-workflow" title="Permanent link">&para;</a></h2>
