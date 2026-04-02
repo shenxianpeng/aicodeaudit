@@ -126,7 +126,7 @@ class LLMAnalyzer:
             return instructor.from_openai(
                 AzureOpenAI(
                     api_key=self.api_key,
-                    api_version="2024-02-01",
+                    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-01"),
                     azure_endpoint=endpoint,
                 )
             )
