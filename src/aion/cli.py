@@ -167,13 +167,13 @@ def scan(
 
     for error_msg, filenames in llm_failures.items():
         if len(filenames) == 1:
-            summary.warnings.append(f"LLM analysis failed for {filenames[0]}: {error_msg}")
+            target_desc = filenames[0]
         else:
-            summary.warnings.append(
-                f"LLM analysis failed for {len(filenames)} files ({', '.join(filenames[:3])}"
-                + (f" and {len(filenames) - 3} more" if len(filenames) > 3 else "")
-                + f"): {error_msg}"
-            )
+            listed = ", ".join(filenames[:3])
+            if len(filenames) > 3:
+                listed += f" and {len(filenames) - 3} more"
+            target_desc = f"{len(filenames)} files ({listed})"
+        summary.warnings.append(f"LLM analysis failed for {target_desc}: {error_msg}")
 
     _exit_with_summary(summary, output)
 
