@@ -119,7 +119,16 @@ def scan(
     analyzer = LLMAnalyzer(api_key=api_key, model=resolved_model, provider=resolved_provider.value, verbose=verbose)
     detector = IncidentDetector()
 
-    for file_path in files_to_scan:
+    total = len(files_to_scan)
+    mode_label = "semgrep+llm" if has_semgrep else "llm-only"
+    stderr_console.print(
+        f"[bold]Scanning[/bold] {total} file{'s' if total != 1 else ''} "
+        f"in [cyan]{normalize_path(target)}[/cyan] "
+        f"using [cyan]{resolved_model}[/cyan] ({mode_label})"
+    )
+
+    for idx, file_path in enumerate(files_to_scan, start=1):
+        stderr_console.print(f"  [[cyan]{idx}/{total}[/cyan]] {file_path.name} ...", end=" ")
         report = ScanReport(file=normalize_path(file_path), ai_generated=True)
         semgrep_findings = []
         if has_semgrep:
@@ -130,6 +139,7 @@ def scan(
         report.semgrep_findings = semgrep_findings
 
         if verbose:
+            stderr_console.print()
             stderr_console.print(f"[bold]Estimated token cost[/bold] {file_path}: {analyzer.estimate_tokens(file_path, context_profile)}")
             if semgrep_findings:
                 stderr_console.print("[bold]Semgrep findings[/bold]")
@@ -159,6 +169,17 @@ def scan(
             summary.warnings.append(f"LLM analysis failed for {file_path.name}: {exc}")
             report.mode = "semgrep-only" if has_semgrep else "skipped"
         report.incidents = detector.detect(file_path, context_profile)
+
+        finding_count = len(report.findings) + len(report.semgrep_findings)
+        incident_count = len(report.incidents)
+        if not verbose:
+            parts = []
+            if finding_count:
+                parts.append(f"[yellow]{finding_count} finding{'s' if finding_count != 1 else ''}[/yellow]")
+            if incident_count:
+                parts.append(f"[red]{incident_count} incident{'s' if incident_count != 1 else ''}[/red]")
+            status = ", ".join(parts) if parts else "[green]clean[/green]"
+            stderr_console.print(status)
 
         summary.reports.append(report)
 
