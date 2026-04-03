@@ -39,8 +39,14 @@ class KnowledgeBase:
     # Learning
     # ------------------------------------------------------------------
 
-    def record_success(self, incident: Incident, verification: VerificationResult) -> RepairPattern:  # noqa: ARG002
-        """Record that *incident* was successfully repaired and verified."""
+    def record_success(self, incident: Incident, verification: VerificationResult) -> RepairPattern:
+        """Record that *incident* was successfully repaired and verified.
+
+        The *verification* result is accepted for API symmetry and future
+        extensibility (e.g. persisting patch diffs), but is not stored in the
+        current release.
+        """
+        del verification  # accepted for future use; not stored in current release
         self._ensure_loaded()
         now = datetime.now(tz=timezone.utc).isoformat()
         strategy = incident.remediation_strategy or ""

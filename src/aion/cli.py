@@ -645,7 +645,8 @@ def status(
                     "incidents": len(snap.incidents),
                     "files": len(snap.file_hashes),
                 })
-            except Exception:  # noqa: BLE001
+            except (ValueError, KeyError, OSError) as exc:
+                stderr_console.print(f"[yellow]warning:[/yellow] could not load snapshot {snap_file.name}: {exc}")
                 continue
 
     kb = KnowledgeBase(base_dir=knowledge_dir)
