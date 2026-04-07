@@ -1106,8 +1106,21 @@ lower values reflect incident severity and count relative to repository size.</p
 <h3 id="knowledge-base">Knowledge base<a class="headerlink" href="#knowledge-base" title="Permanent link">&para;</a></h3>
 <p>Every successful repair is recorded as a pattern in the knowledge base. Over
 time the engine accumulates historical success rates per issue type and
-remediation strategy. These rates are used to compute a <strong>confidence boost</strong> at
-repair time so that well-understood issue types are handled with higher certainty.</p>
+remediation strategy. These rates serve two purposes:</p>
+<ol>
+<li><strong>Confidence boost at the policy gate</strong> — before a <code>PolicyEngine</code> decides
+   whether an incident qualifies for automatic sandbox remediation, it retrieves
+   the knowledge-base boost for that issue type and adds it to the raw incident
+   confidence. Well-understood issue types whose fixes have a high historical
+   success rate therefore become eligible for auto-repair even when the initial
+   confidence is slightly below the configured threshold. This is the feedback
+   loop that makes AION truly self-evolving.</li>
+<li><strong>Repair executor guidance</strong> — the <code>RepairExecutor</code> can use the same boost
+   to signal higher certainty when generating a patch artifact.</li>
+</ol>
+<p>Both <code>process-event</code>, <code>process-event-queue</code>, <code>process-inbox</code> and the <code>watch</code>
+loop automatically load and update the knowledge base from
+<code>.aion/knowledge/patterns.json</code> relative to the target repository root.</p>
 <table>
 <thead>
 <tr>
