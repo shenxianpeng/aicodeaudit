@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .config import AppConfig
 from .defense import RuntimeDefensePlanner
+from .knowledge_base import KnowledgeBase
 from .models import (
     CommandExecutionResult,
     ContextProfile,
@@ -32,6 +33,7 @@ class PolicyEngine:
         self,
         auto_repair_issue_types: set[str] | None = None,
         min_confidence: float = 0.85,
+        knowledge_base: KnowledgeBase | None = None,
     ):
         self.auto_repair_issue_types = auto_repair_issue_types or {
             "raw_sqlite_query",
@@ -44,6 +46,13 @@ class PolicyEngine:
             "weak_cryptography",
         }
         self.min_confidence = min_confidence
+        self.knowledge_base = knowledge_base
+
+    def _effective_confidence(self, incident: Incident) -> float:
+        """Return incident confidence boosted by knowledge-base history, capped at 1.0."""
+        if self.knowledge_base is None:
+            return incident.confidence
+        return min(1.0, incident.confidence + self.knowledge_base.confidence_boost(incident))
 
     def decide(self, event: OrchestrationEvent, incidents: list[Incident]) -> PolicyDecision:
         if not incidents:
@@ -53,19 +62,21 @@ class PolicyEngine:
                 sandbox_required=True,
             )
 
-        blocked = [
-            incident
+        blocked: list[tuple[Incident, float]] = [
+            (incident, self._effective_confidence(incident))
             for incident in incidents
-            if incident.issue_type not in self.auto_repair_issue_types or incident.confidence < self.min_confidence
+            if incident.issue_type not in self.auto_repair_issue_types
+            or self._effective_confidence(incident) < self.min_confidence
         ]
+
         if blocked:
             reasons = []
-            for incident in blocked:
+            for incident, effective_confidence in blocked:
                 if incident.issue_type not in self.auto_repair_issue_types:
                     reasons.append(f"{incident.issue_type} is not approved for automatic remediation.")
-                if incident.confidence < self.min_confidence:
+                if effective_confidence < self.min_confidence:
                     reasons.append(
-                        f"{incident.issue_type} confidence {incident.confidence:.2f} is below the auto-repair threshold."
+                        f"{incident.issue_type} confidence {effective_confidence:.2f} is below the auto-repair threshold."
                     )
             return PolicyDecision(
                 action="needs_human_review",
@@ -208,11 +219,13 @@ class Orchestrator:
         policy_engine: PolicyEngine | None = None,
         sandbox_executor: SandboxExecutor | None = None,
         defense_planner: RuntimeDefensePlanner | None = None,
+        knowledge_base: KnowledgeBase | None = None,
     ):
         self.detector = detector or IncidentDetector()
         self.generator = generator or PatchGenerator()
         self.verifier = verifier or Verifier()
-        self.policy_engine = policy_engine or PolicyEngine()
+        self.knowledge_base = knowledge_base
+        self.policy_engine = policy_engine or PolicyEngine(knowledge_base=knowledge_base)
         self.sandbox_executor = sandbox_executor or SandboxExecutor(self.verifier)
         self.defense_planner = defense_planner or RuntimeDefensePlanner()
 
@@ -223,10 +236,12 @@ class Orchestrator:
         detector: IncidentDetector | None = None,
         generator: PatchGenerator | None = None,
         verifier: Verifier | None = None,
+        knowledge_base: KnowledgeBase | None = None,
     ) -> "Orchestrator":
         policy_engine = PolicyEngine(
             auto_repair_issue_types=set(config.auto_repair_issue_types),
             min_confidence=config.auto_repair_min_confidence,
+            knowledge_base=knowledge_base,
         )
         sandbox_executor = SandboxExecutor(
             verifier=verifier,
@@ -241,6 +256,7 @@ class Orchestrator:
             verifier=verifier,
             policy_engine=policy_engine,
             sandbox_executor=sandbox_executor,
+            knowledge_base=knowledge_base,
         )
 
     def ingest_event(self, event: dict[str, object]) -> OrchestrationEvent:
@@ -303,6 +319,12 @@ class Orchestrator:
         result.defense_plan = self.defense_planner.plan(event, incidents, rollout=sandbox.rollout)
         if sandbox.verification is not None and sandbox.verification.verdict != "verified_fix":
             result.warnings.append("Sandbox verification did not produce a verified fix.")
+        if self.knowledge_base is not None and sandbox.verification is not None:
+            for incident in incidents:
+                if sandbox.verification.verdict == "verified_fix":
+                    self.knowledge_base.record_success(incident, sandbox.verification)
+                else:
+                    self.knowledge_base.record_failure(incident)
         return result
 
     def process_event_queue(

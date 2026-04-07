@@ -6,7 +6,8 @@ import pytest
 from typer.testing import CliRunner
 
 from aion.cli import app
-from aion.models import ContextProfile, Incident
+from aion.knowledge_base import KnowledgeBase
+from aion.models import ContextProfile, Incident, PatchArtifact, VerificationResult
 from aion.orchestrator import Orchestrator, PolicyEngine
 from aion.repair import IncidentDetector, PatchGenerator, RepairExecutor, Verifier
 
@@ -412,3 +413,146 @@ def test_cli_process_event_queue_uses_results_dir_and_cleanup(monkeypatch: pytes
     sandbox_path = Path(payload["results"][0]["sandbox"]["workspace_root"])
     assert not sandbox_path.exists()
     assert payload["results"][0]["sandbox"]["rollout"]["recommendation"] == "approved_for_rollout"
+
+
+# ---------------------------------------------------------------------------
+# Knowledge base ↔ policy engine self-evolving integration
+# ---------------------------------------------------------------------------
+
+
+def _make_incident(
+    issue_type: str = "hardcoded_secret",
+    severity: str = "critical",
+    confidence: float = 0.80,
+    strategy: str = "env_secret",
+) -> Incident:
+    return Incident(
+        id=f"{issue_type}-test",
+        target_file="app.py",
+        issue_type=issue_type,
+        issue="test incident",
+        severity=severity,
+        line=1,
+        confidence=confidence,
+        remediation_strategy=strategy,
+    )
+
+
+def _make_verification(verdict: str = "verified_fix") -> VerificationResult:
+    artifact = PatchArtifact(
+        target_file="app.py",
+        original_content="SECRET = 'abc'",
+        patched_content='import os\nSECRET = os.getenv("SECRET", "")',
+        diff="",
+    )
+    return VerificationResult(
+        artifact=artifact,
+        verdict=verdict,
+        syntax_ok=True,
+        semgrep_ok=True,
+        assertions_ok=True,
+    )
+
+
+def test_policy_engine_uses_knowledge_base_boost(tmp_path: Path) -> None:
+    """Confidence boost from prior successes tips a borderline incident into auto-repair."""
+    kb = KnowledgeBase(base_dir=tmp_path / "knowledge")
+    incident = _make_incident(confidence=0.80)
+
+    # Without the KB boost the incident should fall below min_confidence=0.85.
+    engine_no_kb = PolicyEngine(min_confidence=0.85)
+    event = Orchestrator().ingest_event({"event_type": "code_scan", "target_file": "app.py"})
+    assert engine_no_kb.decide(event, [incident]).action == "needs_human_review"
+
+    # Record enough successes so the boost pushes effective confidence above 0.85.
+    verification = _make_verification()
+    for _ in range(10):
+        kb.record_success(incident, verification)
+
+    engine_with_kb = PolicyEngine(min_confidence=0.85, knowledge_base=kb)
+    decision = engine_with_kb.decide(event, [incident])
+    assert decision.action == "auto_repair_sandbox", (
+        f"Expected auto_repair_sandbox after KB boost but got {decision.action}: {decision.reasons}"
+    )
+
+
+def test_policy_engine_without_knowledge_base_unchanged(tmp_path: Path) -> None:
+    """PolicyEngine without a KB behaves exactly as before — confidence checked raw."""
+    incident = _make_incident(confidence=0.99)
+    engine = PolicyEngine(min_confidence=0.85)
+    event = Orchestrator().ingest_event({"event_type": "code_scan", "target_file": "app.py"})
+    decision = engine.decide(event, [incident])
+    assert decision.action == "auto_repair_sandbox"
+
+
+def test_orchestrator_records_success_in_knowledge_base(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """process_event should record verified fixes in the attached knowledge base."""
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    kb = KnowledgeBase(base_dir=tmp_path / "knowledge")
+    orchestrator = Orchestrator(knowledge_base=kb)
+
+    target = Path("tests/fixtures/vulnerable/02_hardcoded_secret.py").resolve()
+    context = _load_context("tests/fixtures/vulnerable/02_context.json")
+    event = orchestrator.ingest_event({"event_type": "code_scan", "target_file": str(target)})
+
+    result = orchestrator.process_event(event, context)
+
+    assert result.sandbox is not None
+    assert result.sandbox.verification is not None
+    assert result.sandbox.verification.verdict == "verified_fix"
+
+    # The knowledge base should now hold a success record for hardcoded_secret.
+    patterns = kb.get_patterns("hardcoded_secret")
+    assert len(patterns) >= 1
+    assert patterns[0].success_count >= 1
+
+    orchestrator.cleanup_sandbox(result)
+
+
+def test_orchestrator_records_failure_in_knowledge_base(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """process_event should record a failure when sandbox verification verdict is not verified_fix."""
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    kb = KnowledgeBase(base_dir=tmp_path / "knowledge")
+
+    # Pre-seed one success so the pattern exists, then trigger a verification failure
+    # by making Verifier.verify always return "unsafe_patch".
+    incident = _make_incident(issue_type="hardcoded_secret", strategy="env_secret")
+    verification = _make_verification("verified_fix")
+    kb.record_success(incident, verification)
+    initial_failure_count = kb.get_patterns("hardcoded_secret")[0].failure_count
+
+    # Monkeypatch Verifier.verify to return an unsafe patch verdict.
+    def _bad_verify(self: Verifier, artifact: PatchArtifact) -> VerificationResult:
+        return _make_verification("unsafe_patch")
+
+    monkeypatch.setattr("aion.orchestrator.Verifier.verify", _bad_verify)
+
+    orchestrator = Orchestrator(knowledge_base=kb)
+    target = Path("tests/fixtures/vulnerable/02_hardcoded_secret.py").resolve()
+    context = _load_context("tests/fixtures/vulnerable/02_context.json")
+    event = orchestrator.ingest_event({"event_type": "code_scan", "target_file": str(target)})
+
+    result = orchestrator.process_event(event, context)
+    orchestrator.cleanup_sandbox(result)
+
+    assert result.sandbox is not None
+    assert result.sandbox.verification is not None
+    assert result.sandbox.verification.verdict == "unsafe_patch"
+
+    patterns = kb.get_patterns("hardcoded_secret")
+    assert len(patterns) >= 1
+    assert patterns[0].failure_count > initial_failure_count
+
+
+def test_orchestrator_from_config_passes_knowledge_base(tmp_path: Path) -> None:
+    """Orchestrator.from_config should pass the KB to the PolicyEngine."""
+    from aion.config import AppConfig
+    kb = KnowledgeBase(base_dir=tmp_path / "knowledge")
+    config = AppConfig()
+    orchestrator = Orchestrator.from_config(config, knowledge_base=kb)
+    assert orchestrator.knowledge_base is kb
+    assert orchestrator.policy_engine.knowledge_base is kb

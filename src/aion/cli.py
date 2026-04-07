@@ -912,9 +912,10 @@ def _resolve_event_root(event: OrchestrationEvent) -> Path:
     return Path(event.target_file).resolve().parent
 
 
-def _build_orchestrator(root: Path) -> Orchestrator:
+def _build_orchestrator(root: Path, knowledge_base: KnowledgeBase | None = None) -> Orchestrator:
     config = load_app_config(root)
-    return Orchestrator.from_config(config)
+    kb = knowledge_base or KnowledgeBase(base_dir=root / ".aion" / "knowledge")
+    return Orchestrator.from_config(config, knowledge_base=kb)
 
 def _accumulate_queue_summary(summary: EventQueueSummary, result: OrchestrationResult) -> None:
     if result.policy.action == "auto_repair_sandbox":
