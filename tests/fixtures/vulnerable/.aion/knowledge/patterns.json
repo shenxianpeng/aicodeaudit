@@ -1,0 +1,11 @@
+[
+  {
+    "issue_type": "missing_auth_decorator",
+    "severity": "high",
+    "strategy": "inject_auth_decorator",
+    "confidence_boost": 0.05,
+    "success_count": 5,
+    "failure_count": 0,
+    "last_seen": "2026-04-07T14:36:03.801188+00:00"
+  }
+]
