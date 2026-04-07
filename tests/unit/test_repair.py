@@ -526,7 +526,7 @@ def test_orchestrator_records_failure_in_knowledge_base(
     initial_failure_count = kb.get_patterns("hardcoded_secret")[0].failure_count
 
     # Monkeypatch Verifier.verify to return an unsafe patch verdict.
-    def _bad_verify(self, artifact):  # noqa: ANN001
+    def _bad_verify(self: Verifier, artifact: PatchArtifact) -> VerificationResult:
         return _make_verification("unsafe_patch")
 
     monkeypatch.setattr("aion.orchestrator.Verifier.verify", _bad_verify)

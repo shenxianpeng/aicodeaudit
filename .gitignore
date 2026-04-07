@@ -10,3 +10,6 @@ src/aion.egg-info/
 src/aion_evolve.egg-info/
 dist/
 site/
+
+# AION runtime state (snapshots, knowledge base, inbox, releases)
+.aion/

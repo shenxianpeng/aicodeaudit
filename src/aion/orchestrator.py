@@ -48,6 +48,12 @@ class PolicyEngine:
         self.min_confidence = min_confidence
         self.knowledge_base = knowledge_base
 
+    def _effective_confidence(self, incident: Incident) -> float:
+        """Return incident confidence boosted by knowledge-base history, capped at 1.0."""
+        if self.knowledge_base is None:
+            return incident.confidence
+        return min(1.0, incident.confidence + self.knowledge_base.confidence_boost(incident))
+
     def decide(self, event: OrchestrationEvent, incidents: list[Incident]) -> PolicyDecision:
         if not incidents:
             return PolicyDecision(
@@ -56,14 +62,12 @@ class PolicyEngine:
                 sandbox_required=True,
             )
 
-        blocked = []
-        for incident in incidents:
-            effective_confidence = incident.confidence
-            if self.knowledge_base is not None:
-                effective_confidence = min(1.0, incident.confidence + self.knowledge_base.confidence_boost(incident))
-
-            if incident.issue_type not in self.auto_repair_issue_types or effective_confidence < self.min_confidence:
-                blocked.append((incident, effective_confidence))
+        blocked: list[tuple[Incident, float]] = [
+            (incident, self._effective_confidence(incident))
+            for incident in incidents
+            if incident.issue_type not in self.auto_repair_issue_types
+            or self._effective_confidence(incident) < self.min_confidence
+        ]
 
         if blocked:
             reasons = []
