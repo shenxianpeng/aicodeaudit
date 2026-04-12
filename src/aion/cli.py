@@ -602,16 +602,20 @@ def watch(
                 if auto_repair:
                     repaired = 0
                     executor = RepairExecutor(knowledge_base=kb)
-                    for incident in report.new_incidents:
-                        file_path = Path(incident.target_file)
+                    file_targets = sorted({incident.target_file for incident in report.new_incidents})
+                    for target_file in file_targets:
+                        file_path = Path(target_file)
                         if file_path.exists():
                             record = executor.run(file_path, context_profile, verify=True)
-                            if record.verification and record.verification.verdict == "verified_fix":
+                            applied_path = _apply_verified_repair(record)
+                            if applied_path is not None:
                                 repaired += 1
+                                stderr_console.print(f"[green]  Applied verified patch to {applied_path}.[/green]")
                     if repaired:
-                        stderr_console.print(f"[green]  Auto-repaired {repaired} incident(s).[/green]")
+                        stderr_console.print(f"[green]  Applied verified patches to {repaired} file(s).[/green]")
                         # Refresh baseline after successful repairs.
-                        baseline = detector.snapshot(target, context_profile)
+                        refreshed_context = _load_context_profile(target, context_file)
+                        baseline = detector.snapshot(target, refreshed_context)
                         detector.save_snapshot(baseline, name="watch-baseline")
                     else:
                         stderr_console.print("[yellow]  No incidents could be auto-repaired; human review required.[/yellow]")
@@ -1296,6 +1300,21 @@ def _record_from_run_result(result: RunIncidentResult, context_profile: ContextP
         verification=result.verification,
         warnings=result.session.warnings,
     )
+
+
+def _apply_verified_repair(record: RepairAttemptRecord) -> Path | None:
+    artifact = record.artifact
+    verification = record.verification
+    if artifact is None or verification is None:
+        return None
+    if verification.verdict != "verified_fix":
+        return None
+
+    target_path = Path(record.target)
+    temp_path = target_path.with_name(f".{target_path.name}.aion.tmp")
+    temp_path.write_text(artifact.patched_content, encoding="utf-8")
+    temp_path.replace(target_path)
+    return target_path
 
 
 def _write_record(record: RepairAttemptRecord, destination: Path) -> None:

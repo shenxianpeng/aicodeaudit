@@ -589,6 +589,106 @@ def test_watch_detects_drift_on_new_vulnerability(tmp_path: Path, monkeypatch) -
     assert "drift detected" in result.output
 
 
+def test_watch_auto_repair_applies_verified_patch_and_refreshes_baseline(tmp_path: Path, monkeypatch) -> None:
+    import json
+
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    monkeypatch.setattr("time.sleep", lambda _: None)
+
+    runner = CliRunner()
+    target = tmp_path / "app.py"
+    target.write_text("x = 1\n", encoding="utf-8")
+    snaps_dir = tmp_path / "snaps"
+    knowledge_dir = tmp_path / "knowledge"
+
+    runner.invoke(
+        app,
+        [
+            "watch",
+            str(target),
+            "--snapshots-dir", str(snaps_dir),
+            "--knowledge-dir", str(knowledge_dir),
+            "--max-cycles", "0",
+            "--interval", "5",
+        ],
+    )
+
+    target.write_text(
+        Path("tests/fixtures/vulnerable/02_hardcoded_secret.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "watch",
+            str(target),
+            "--snapshots-dir", str(snaps_dir),
+            "--knowledge-dir", str(knowledge_dir),
+            "--max-cycles", "1",
+            "--interval", "5",
+        ],
+    )
+
+    assert result.exit_code == 0
+    patched = target.read_text(encoding="utf-8")
+    assert 'os.getenv("API_KEY", "")' in patched
+    assert "sk-live-demo-secret" not in patched
+    assert "Applied verified patch" in result.output
+
+    watch_baseline = json.loads((snaps_dir / "watch-baseline.json").read_text(encoding="utf-8"))
+    assert watch_baseline["incidents"] == []
+
+
+def test_watch_auto_repair_skips_unverified_patch(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    monkeypatch.setattr("time.sleep", lambda _: None)
+
+    runner = CliRunner()
+    target = tmp_path / "app.py"
+    target.write_text("x = 1\n", encoding="utf-8")
+    snaps_dir = tmp_path / "snaps"
+    knowledge_dir = tmp_path / "knowledge"
+
+    runner.invoke(
+        app,
+        [
+            "watch",
+            str(target),
+            "--snapshots-dir", str(snaps_dir),
+            "--knowledge-dir", str(knowledge_dir),
+            "--max-cycles", "0",
+            "--interval", "5",
+        ],
+    )
+
+    vulnerable = (
+        "import sqlite3\n\n"
+        "def load_user(user_id):\n"
+        "    conn = sqlite3.connect('db.sqlite3')\n"
+        "    cursor = conn.cursor()\n"
+        '    cursor.execute(f"SELECT email FROM users WHERE id = {user_id}")\n'
+        "    return cursor.fetchone()\n"
+    )
+    target.write_text(vulnerable, encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "watch",
+            str(target),
+            "--snapshots-dir", str(snaps_dir),
+            "--knowledge-dir", str(knowledge_dir),
+            "--max-cycles", "1",
+            "--interval", "5",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert target.read_text(encoding="utf-8") == vulnerable
+    assert "No incidents could be auto-repaired" in result.output
+
+
 # ---------------------------------------------------------------------------
 # serve-webhook command
 # ---------------------------------------------------------------------------
