@@ -21,7 +21,7 @@ from .models import (
     VerificationResult,
     normalize_path,
 )
-from .risk_heuristics import fallback_reasons
+from .risk_heuristics import ROUTE_DECORATOR_NAMES, fallback_reasons
 from .semgrep_runner import SemgrepError, SemgrepRunner, semgrep_available
 
 
@@ -866,11 +866,14 @@ class Verifier:
     def _run_assertions(self, artifact: PatchArtifact) -> tuple[bool, dict[str, list[object]]]:
         checks: list[VerificationCheck] = []
         reasons: list[str] = []
-        patched = artifact.patched_content
+        try:
+            tree = ast.parse(artifact.patched_content)
+        except SyntaxError:
+            return False, {"checks": checks, "reasons": reasons}
 
         for plan in artifact.plans:
             if plan.strategy == "parameterize_sqlite_query":
-                passed = 'cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))' in patched
+                passed = self._has_parameterized_sqlite_query(tree)
                 checks.append(
                     VerificationCheck(
                         name="sqlite_parameterization",
@@ -881,7 +884,7 @@ class Verifier:
                 if not passed:
                     reasons.append("Patched sqlite query is not parameterized.")
             elif plan.strategy == "env_secret":
-                passed = "os.getenv(" in patched and "sk-live-" not in patched
+                passed = self._uses_env_lookup_for_secret(tree)
                 checks.append(
                     VerificationCheck(
                         name="secret_removed",
@@ -893,7 +896,7 @@ class Verifier:
                     reasons.append("Hardcoded secret literal still exists after patching.")
             elif plan.strategy == "inject_auth_decorator":
                 details = plan.summary.replace("Insert the repository auth decorator ", "").rstrip(".")
-                passed = details in patched
+                passed = self._all_route_handlers_have_auth_decorator(tree, details)
                 checks.append(
                     VerificationCheck(
                         name="auth_decorator_present",
@@ -904,11 +907,7 @@ class Verifier:
                 if not passed:
                     reasons.append("Auth decorator was not injected into the route declaration.")
             elif plan.strategy == "safe_yaml_load":
-                remaining_unsafe = any(
-                    "Loader" not in m.group(0)
-                    for m in re.finditer(r"\byaml\.load\s*\([^)]*\)", patched)
-                )
-                passed = "yaml.safe_load(" in patched and not remaining_unsafe
+                passed = self._uses_safe_yaml_loader(tree)
                 checks.append(
                     VerificationCheck(
                         name="yaml_safe_load",
@@ -919,7 +918,7 @@ class Verifier:
                 if not passed:
                     reasons.append("Insecure yaml.load still present after patching.")
             elif plan.strategy == "shlex_quote_command":
-                passed = "shlex.quote(" in patched
+                passed = self._uses_shlex_quote_for_os_system(tree)
                 checks.append(
                     VerificationCheck(
                         name="command_shlex_quoted",
@@ -930,7 +929,7 @@ class Verifier:
                 if not passed:
                     reasons.append("os.system call is not protected with shlex.quote.")
             elif plan.strategy == "ast_literal_eval":
-                passed = "ast.literal_eval(" in patched and "import ast" in patched
+                passed = self._replaces_eval_with_literal_eval(tree)
                 checks.append(
                     VerificationCheck(
                         name="eval_replaced",
@@ -941,7 +940,7 @@ class Verifier:
                 if not passed:
                     reasons.append("eval() was not replaced with ast.literal_eval().")
             elif plan.strategy == "shlex_quote_subprocess":
-                passed = "shlex.quote(" in patched
+                passed = self._uses_shlex_quote_for_subprocess(tree)
                 checks.append(
                     VerificationCheck(
                         name="subprocess_shlex_quoted",
@@ -952,7 +951,7 @@ class Verifier:
                 if not passed:
                     reasons.append("subprocess call is not protected with shlex.quote.")
             elif plan.strategy == "upgrade_hash_algorithm":
-                passed = "hashlib.sha256(" in patched and "hashlib.md5(" not in patched
+                passed = self._upgrades_weak_hash_algorithm(tree)
                 checks.append(
                     VerificationCheck(
                         name="weak_hash_removed",
@@ -964,6 +963,168 @@ class Verifier:
                     reasons.append("Weak hash algorithm hashlib.md5 still present after patching.")
 
         return not reasons, {"checks": checks, "reasons": reasons}
+
+    def _has_parameterized_sqlite_query(self, tree: ast.AST) -> bool:
+        execute_calls = [call for call in self._iter_calls(tree, "cursor.execute")]
+        if not execute_calls:
+            return False
+        has_safe_call = False
+        for call in execute_calls:
+            if not call.args:
+                continue
+            query_arg = call.args[0]
+            if isinstance(query_arg, ast.JoinedStr):
+                return False
+            if len(call.args) < 2:
+                continue
+            if self._is_placeholder_query(query_arg):
+                has_safe_call = True
+        return has_safe_call
+
+    def _uses_env_lookup_for_secret(self, tree: ast.AST) -> bool:
+        assignments = list(self._iter_secret_assignments(tree))
+        if not assignments:
+            return False
+        return all(self._is_env_lookup(value) for _, value in assignments)
+
+    def _all_route_handlers_have_auth_decorator(self, tree: ast.AST, decorator_name: str) -> bool:
+        expected = decorator_name.lstrip("@").split(".")[-1]
+        route_handlers = []
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            decorator_names = [self._render_name(decorator) for decorator in node.decorator_list]
+            if any(name in ROUTE_DECORATOR_NAMES for name in decorator_names if name):
+                route_handlers.append(decorator_names)
+        if not route_handlers:
+            return False
+        return all(any(name.split(".")[-1] == expected for name in names if name) for names in route_handlers)
+
+    def _uses_safe_yaml_loader(self, tree: ast.AST) -> bool:
+        saw_safe_load = False
+        for call in self._iter_calls(tree):
+            name = self._render_name(call.func)
+            if name == "yaml.safe_load":
+                saw_safe_load = True
+            if name == "yaml.load":
+                loader_kwarg = any(kw.arg == "Loader" for kw in call.keywords)
+                if not loader_kwarg:
+                    return False
+        return saw_safe_load
+
+    def _uses_shlex_quote_for_os_system(self, tree: ast.AST) -> bool:
+        os_calls = [call for call in self._iter_calls(tree, "os.system")]
+        if not os_calls:
+            return False
+        saw_quoted = False
+        for call in os_calls:
+            if not call.args:
+                continue
+            arg = call.args[0]
+            if isinstance(arg, ast.JoinedStr):
+                if not self._joined_str_values_are_quoted(arg):
+                    return False
+                saw_quoted = True
+        return saw_quoted
+
+    def _replaces_eval_with_literal_eval(self, tree: ast.AST) -> bool:
+        saw_literal_eval = False
+        for call in self._iter_calls(tree):
+            name = self._render_name(call.func)
+            if name == "eval":
+                return False
+            if name == "ast.literal_eval":
+                saw_literal_eval = True
+        return saw_literal_eval
+
+    def _uses_shlex_quote_for_subprocess(self, tree: ast.AST) -> bool:
+        subprocess_names = {"subprocess.call", "subprocess.run", "subprocess.Popen"}
+        saw_quoted = False
+        for call in self._iter_calls(tree):
+            name = self._render_name(call.func)
+            if name not in subprocess_names:
+                continue
+            has_shell_true = any(
+                kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True
+                for kw in call.keywords
+            )
+            if not has_shell_true or not call.args:
+                continue
+            arg = call.args[0]
+            if isinstance(arg, ast.JoinedStr):
+                if not self._joined_str_values_are_quoted(arg):
+                    return False
+                saw_quoted = True
+        return saw_quoted
+
+    def _upgrades_weak_hash_algorithm(self, tree: ast.AST) -> bool:
+        saw_sha256 = False
+        for call in self._iter_calls(tree):
+            name = self._render_name(call.func)
+            if name == "hashlib.md5":
+                return False
+            if name == "hashlib.sha256":
+                saw_sha256 = True
+        return saw_sha256
+
+    def _iter_calls(self, tree: ast.AST, name: str | None = None) -> list[ast.Call]:
+        calls: list[ast.Call] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if name is None or self._render_name(node.func) == name:
+                calls.append(node)
+        return calls
+
+    def _iter_secret_assignments(self, tree: ast.AST) -> list[tuple[str, ast.AST]]:
+        assignments: list[tuple[str, ast.AST]] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    name = self._render_name(target)
+                    if self._is_secret_name(name):
+                        assignments.append((name, node.value))
+            elif isinstance(node, ast.AnnAssign):
+                name = self._render_name(node.target)
+                if node.value is not None and self._is_secret_name(name):
+                    assignments.append((name, node.value))
+        return assignments
+
+    def _is_secret_name(self, name: str) -> bool:
+        markers = ("secret", "token", "api_key", "password")
+        lowered = name.lower()
+        return any(marker in lowered for marker in markers)
+
+    def _is_env_lookup(self, value: ast.AST) -> bool:
+        if not isinstance(value, ast.Call):
+            return False
+        name = self._render_name(value.func)
+        return name in {"os.getenv", "os.environ.get"}
+
+    def _is_placeholder_query(self, value: ast.AST) -> bool:
+        return isinstance(value, ast.Constant) and isinstance(value.value, str) and "?" in value.value
+
+    def _joined_str_values_are_quoted(self, joined: ast.JoinedStr) -> bool:
+        saw_formatted = False
+        for value in joined.values:
+            if not isinstance(value, ast.FormattedValue):
+                continue
+            saw_formatted = True
+            if not isinstance(value.value, ast.Call):
+                return False
+            if self._render_name(value.value.func) != "shlex.quote":
+                return False
+        return saw_formatted
+
+    def _render_name(self, node: ast.AST) -> str:
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            base = self._render_name(node.value)
+            return f"{base}.{node.attr}" if base else node.attr
+        if isinstance(node, ast.Call):
+            return self._render_name(node.func)
+        return ""
 
 
 class RepairExecutor:

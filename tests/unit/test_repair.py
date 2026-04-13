@@ -69,6 +69,36 @@ def test_repair_pipeline_skips_safe_fixture(monkeypatch: pytest.MonkeyPatch) -> 
     assert artifact is None
 
 
+def test_verifier_accepts_parameterized_sqlite_variant_without_fixture_exact_string(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
+    target = tmp_path / "service.py"
+    target.write_text(
+        "\n".join(
+            [
+                "import sqlite3",
+                "",
+                "def load_user(user_id):",
+                "    conn = sqlite3.connect('db.sqlite3')",
+                "    cursor = conn.cursor()",
+                '    cursor.execute(f"SELECT email FROM users WHERE id = {user_id}")',
+                "    return cursor.fetchone()",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    detector = IncidentDetector()
+    artifact = PatchGenerator().generate(target, detector.detect(target, ContextProfile()), ContextProfile())
+
+    assert artifact is not None
+    verification = Verifier().verify(artifact)
+    assert verification.verdict == "verified_fix"
+
+
 def test_incident_detector_merges_semgrep_and_llm_findings_into_incidents(tmp_path: Path) -> None:
     target = tmp_path / "demo.py"
     target.write_text("print('hello')\n", encoding="utf-8")

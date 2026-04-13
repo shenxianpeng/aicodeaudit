@@ -718,6 +718,8 @@ def test_watch_auto_repair_applies_verified_patch_and_refreshes_baseline(tmp_pat
 
 
 def test_watch_auto_repair_skips_unverified_patch(tmp_path: Path, monkeypatch) -> None:
+    from aion.models import PatchArtifact, RepairAttemptRecord, RemediationPlan, VerificationResult
+
     monkeypatch.setattr("aion.repair.semgrep_available", lambda: False)
     monkeypatch.setattr("time.sleep", lambda _: None)
 
@@ -748,6 +750,41 @@ def test_watch_auto_repair_skips_unverified_patch(tmp_path: Path, monkeypatch) -
         "    return cursor.fetchone()\n"
     )
     target.write_text(vulnerable, encoding="utf-8")
+
+    def fake_run(self, target_path, context_profile, verify=True):
+        artifact = PatchArtifact(
+            incident_ids=["demo"],
+            target_file=str(target_path),
+            original_content=vulnerable,
+            patched_content=vulnerable.replace("email", "username"),
+            diff="",
+            plans=[
+                RemediationPlan(
+                    incident_id="demo",
+                    target_file=str(target_path),
+                    strategy="parameterize_sqlite_query",
+                    summary="Replace interpolated sqlite query with a parameterized call.",
+                )
+            ],
+        )
+        verification = VerificationResult(
+            artifact=artifact,
+            verdict="unsafe_patch",
+            syntax_ok=True,
+            semgrep_ok=True,
+            assertions_ok=False,
+            failure_reasons=["semantic verification failed"],
+        )
+        return RepairAttemptRecord(
+            target=str(target_path),
+            created_at="2026-01-01T00:00:00+00:00",
+            context_profile=ContextProfile(),
+            incidents=[],
+            artifact=artifact,
+            verification=verification,
+        )
+
+    monkeypatch.setattr(cli_module.RepairExecutor, "run", fake_run)
 
     result = runner.invoke(
         app,
