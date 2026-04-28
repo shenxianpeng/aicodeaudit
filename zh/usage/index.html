@@ -612,15 +612,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7" class="md-nav__link">
+  <a href="#7-dependabot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. 追踪安全漂移与系统演进
+        7. 自动更新（Dependabot 风格）
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="7. 追踪安全漂移与系统演进">
+    <nav class="md-nav" aria-label="7. 自动更新（Dependabot 风格）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#github-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub Action
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 追踪安全漂移与系统演进
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. 追踪安全漂移与系统演进">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -673,10 +701,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#9" class="md-nav__link">
     <span class="md-ellipsis">
       
-        运行说明
+        9. 运行说明
       
     </span>
   </a>
@@ -876,15 +904,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#7" class="md-nav__link">
+  <a href="#7-dependabot" class="md-nav__link">
     <span class="md-ellipsis">
       
-        7. 追踪安全漂移与系统演进
+        7. 自动更新（Dependabot 风格）
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="7. 追踪安全漂移与系统演进">
+    <nav class="md-nav" aria-label="7. 自动更新（Dependabot 风格）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#github-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub Action
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 追踪安全漂移与系统演进
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. 追踪安全漂移与系统演进">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -937,10 +993,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_7" class="md-nav__link">
+  <a href="#9" class="md-nav__link">
     <span class="md-ellipsis">
       
-        运行说明
+        9. 运行说明
       
     </span>
   </a>
@@ -970,7 +1026,7 @@
 <h1 id="_1">使用<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
 <h2 id="_2">前置条件<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <ul>
-<li>运行 <code>scan</code> 前先设置 <code>OPENAI_API_KEY</code> 或 <code>ANTHROPIC_API_KEY</code></li>
+<li>运行 <code>scan</code> 前先设置 <code>OPENAI_API_KEY</code>、<code>ANTHROPIC_API_KEY</code>、<code>DEEPSEEK_API_KEY</code> 或 <code>QWEN_API_KEY</code></li>
 <li>如果希望统一策略和 sandbox 默认值，请在目标仓库根目录放置 <code>.aion.yaml</code></li>
 <li>需要机器可读输出时使用 <code>--output json</code></li>
 </ul>
@@ -1096,22 +1152,64 @@
 <li>dependency pin 建议</li>
 <li>code patch follow-up 动作</li>
 </ul>
-<h2 id="7">7. 追踪安全漂移与系统演进<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<h2 id="7-dependabot">7. 自动更新（Dependabot 风格）<a class="headerlink" href="#7-dependabot" title="Permanent link">&para;</a></h2>
+<p>运行完整的扫描 → 修复 → PR 流程：</p>
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>auto-update<span class="w"> </span>--target<span class="w"> </span>./
+</code></pre></div>
+<p>Dry-run 预览将要执行的操作，但不创建 PR：</p>
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>auto-update<span class="w"> </span>--target<span class="w"> </span>./<span class="w"> </span>--dry-run
+</code></pre></div>
+<p><code>auto-update</code> 命令会：</p>
+<ol>
+<li>读取 <code>.aion.yaml</code> 中的调度、策略和 PR 配置</li>
+<li>扫描所有 Python 文件中的安全事件</li>
+<li>为支持的问题类型生成确定性 patch</li>
+<li>在隔离工作区中验证每个 patch</li>
+<li>为每个已验证的修复创建 pull request</li>
+<li>遵守 <code>open_pull_requests_limit</code> 以避免 PR 洪水</li>
+</ol>
+<h3 id="github-action">GitHub Action<a class="headerlink" href="#github-action" title="Permanent link">&para;</a></h3>
+<p>AION 提供了可复用的 GitHub Action（<code>action.yml</code>）。在你的 workflow 中添加：</p>
+<div class="language-yaml highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shenxianpeng/aion@main</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">with</span><span class="p">:</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;.&#39;</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="nt">OPENAI_API_KEY</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.OPENAI_API_KEY }}</span>
+</code></pre></div>
+<p>或像 Dependabot 一样定时调度：</p>
+<div class="language-yaml highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">AION Auto-Update</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nt">on</span><span class="p">:</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">schedule</span><span class="p">:</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">cron</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;0</span><span class="nv"> </span><span class="s">9</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">1&#39;</span><span class="w">  </span><span class="c1"># 每周一早 09:00 UTC</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">  </span><span class="nt">workflow_dispatch</span><span class="p">:</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="nt">permissions</span><span class="p">:</span>
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="w">  </span><span class="nt">contents</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span>
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="w">  </span><span class="nt">pull-requests</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span>
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>
+<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="nt">jobs</span><span class="p">:</span>
+<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="w">  </span><span class="nt">auto-update</span><span class="p">:</span>
+<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v6</span>
+<a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shenxianpeng/aion@main</span>
+</code></pre></div>
+<h2 id="8">8. 追踪安全漂移与系统演进<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
 <h3 id="_3">保存安全基线快照<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <p>捕获仓库当前的安全状态：</p>
-<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>snapshot<span class="w"> </span>./src<span class="w"> </span>--name<span class="w"> </span>baseline
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>snapshot<span class="w"> </span>./src<span class="w"> </span>--name<span class="w"> </span>baseline
 </code></pre></div>
 <p>命令会生成 <code>.aion/snapshots/baseline.json</code>，其中包含健康评分、事件列表和文件哈希——
 即仓库安全态势的可复现指纹。</p>
 <h3 id="_4">检查安全漂移<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <p>将当前状态与已保存的快照对比，检测是否出现安全回退：</p>
-<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>drift<span class="w"> </span>./src<span class="w"> </span>--name<span class="w"> </span>baseline
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>drift<span class="w"> </span>./src<span class="w"> </span>--name<span class="w"> </span>baseline
 </code></pre></div>
 <p>退出码 <code>0</code> 表示没有回退，退出码 <code>1</code> 表示发现了新的安全事件。
 使用 <code>--output json</code> 可获取机器可读的漂移报告，便于 CI 集成。</p>
 <h3 id="_5">持续监控模式<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <p>监控目录并在发现安全漂移时自动修复：</p>
-<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>watch<span class="w"> </span>./src<span class="w"> </span>--interval<span class="w"> </span><span class="m">30</span><span class="w"> </span>--auto-repair
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>watch<span class="w"> </span>./src<span class="w"> </span>--interval<span class="w"> </span><span class="m">30</span><span class="w"> </span>--auto-repair
 </code></pre></div>
 <p>AION 每隔 <code>--interval</code> 秒轮询一次，将当前状态与上一个已知好的基线对比，
 并自动生成和验证新事件的修复补丁。当修复达到 <code>verified_fix</code> 时，
@@ -1119,11 +1217,11 @@
 使后续修复持续改进。</p>
 <h3 id="_6">查看引擎健康状态和已学习的修复模式<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <p>显示已保存的快照和知识库中的修复模式：</p>
-<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>status
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># 或指定自定义 .aion 目录</span>
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>status<span class="w"> </span>--aion-dir<span class="w"> </span>./.aion<span class="w"> </span>--output<span class="w"> </span>json
+<div class="language-bash highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>status
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="c1"># 或指定自定义 .aion 目录</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>uv<span class="w"> </span>run<span class="w"> </span>aion<span class="w"> </span>status<span class="w"> </span>--aion-dir<span class="w"> </span>./.aion<span class="w"> </span>--output<span class="w"> </span>json
 </code></pre></div>
-<h2 id="_7">运行说明<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<h2 id="9">9. 运行说明<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
 <ul>
 <li>当前版本会生成 patch artifact；<code>watch</code> 仅会在验证通过后改写被监控的本地文件，不会直接原地改写生产环境文件。</li>
 <li><code>sandbox_verification_commands</code> 只会在 staged workspace 中执行，不会在你的工作树里直接运行。</li>
